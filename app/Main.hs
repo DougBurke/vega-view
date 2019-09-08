@@ -23,16 +23,20 @@ import qualified Text.Blaze.Html5.Attributes as A
 import Control.Exception (IOException, try)
 import Control.Monad (forM_, unless)
 import Control.Monad.IO.Class (liftIO)
-import Data.Aeson (Value(String, Object), Object, eitherDecode', encode)
+import Data.Aeson (Value(String, Object), Object
+                  , (.=)
+                  , eitherDecode', encode, object)
 import Data.List (sort)
+import Data.Maybe (catMaybes)
 import Data.Version (showVersion)
 import Network.HTTP.Types (status404)
 import System.Directory (doesDirectoryExist, listDirectory)
-import System.FilePath ((</>), takeDirectory)
+import System.FilePath ((</>), takeBaseName, takeDirectory)
 import Text.Blaze.Html5 ((!))
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Scotty (ScottyM, ActionM
-                  , get, html, notFound, param
+                  , get, html, json
+                  , notFound, param
                   , redirect, regex
                   , status, scotty
                   , text)
@@ -115,6 +119,19 @@ readSpec infile = do
            Right _ -> Left "JSON was not an object"
            Left e -> Left e
 
+
+-- | Return a HTML block (a div) that will dislay the visualization,
+--   if the file is a JSON object (but not guaranteed to be a Vega or
+--   Vega-Lite spec). The id of the visualization is based on the
+--   file name, so it is assumed to be unique for the page.
+--
+makeSpec :: FilePath -> IO (Maybe H.Html)
+makeSpec infile = do
+  espec <- readSpec infile
+  case espec of
+    Left _ -> pure Nothing
+    Right s -> pure (Just (createView s (takeBaseName infile)))
+
   
 indexPage :: H.Html
 indexPage =
@@ -131,27 +148,234 @@ indexPage =
                    , " to see the available visualizations."
                    ])
       
-  
-dirPage :: FilePath -> ActionM ()
-dirPage indir = do
-  infiles <- liftIO (listDirectory indir)
 
-  let atTop = indir == "."
+-- Return the directories in ths directory, and the JSON files we
+-- can try displaying. All other files are dropped.
+--
+getFileContents ::
+  FilePath
+  -> IO ([FilePath], [(FilePath, H.Html)])
+  -- ^ First we list the directories in ths directory, and then the
+  --   displayable contents. Either list can be empty.
+  --
+getFileContents indir = do
+
+  infiles <- sort <$> listDirectory indir
+  dirFlags <- mapM doesDirectoryExist infiles
+
+  let files = zip dirFlags infiles
+
+      -- these are not expected to be large lists so any duplicated effort
+      -- is not large; also, rely on the power of the compiler to fuse
+      -- everything
+      --
+      dirNames = map snd (filter fst files)
+      otherNames = map snd (filter (not . fst) files)
+
+      go f = do
+        mspec <- makeSpec f
+        case mspec of
+          Just h -> pure (Just (f, h))
+          _ -> pure Nothing
   
-      page = (H.docTypeHtml ! A.lang "en-US") $ do
+  mspecs <- mapM go otherNames
+
+  let specs = catMaybes mspecs
+
+  pure (dirNames, specs)
+
+
+pageLink :: FilePath -> FilePath -> H.Html
+pageLink indir infile =
+  let toHref = H.toValue ("/display" </> indir </> infile)
+  in (H.a ! A.href toHref) (H.toHtml infile)
+
+makeLi :: FilePath -> FilePath -> H.Html
+makeLi indir infile = H.li (pageLink indir infile)
+
+embedLink :: FilePath -> FilePath -> H.Html
+embedLink indir infile =
+  let toHref = H.toValue ("/embed" </> indir </> infile)
+      hdlr = "embed('" <> toHref <> "');"
+
+  in (H.a ! A.href "#" ! A.onclick hdlr) (H.toHtml infile)
+
+-- Nothing to see here; slightly different if base directory or not
+emptyDir :: FilePath -> ActionM ()
+emptyDir indir =
+  let page = (H.docTypeHtml ! A.lang "en-US") $ do
         H.head (H.title (H.toHtml ("Files to view: " ++ indir)))
         H.body $ do
           H.h1 "Vega and Vega-Lite viewer"
+
+          if indir == "."
+            then H.p "There is nothing to see in the base directory!"
+            else do
+              H.p (H.toHtml ("Directory: " ++ indir))
+              H.p "There is nothing to see here!"
+              H.ul (makeLi indir "..")
+
+  in html (renderHtml page)
+
+
+-- Code to display a specification inline
+--
+-- Would be a lot nicer to embed the code from a file at build time
+-- or to load at run time.
+--
+-- TODO: set max width/height of the visualization window so that
+--       overflow works? Not obvious best way to do this.
+--
+-- TODO: allow the user to drag the window around
+--
+inlineJS :: H.Html
+inlineJS =
+  let cts = [ "function embed(path) { "
+            , "var req = new XMLHttpRequest(); "
+            , "req.addEventListener('load', embedSpec); "
+            , "req.responseType = 'json'; "
+            , "req.open('GET', path); "
+            , "req.send(); "
+            , "} "
+            , "function embedSpec(e) { "
+            , "const div = document.getElementById('vizview'); "
+            , "while (div.firstChild) { "
+            , "div.removeChild(div.firstChild);"
+            , "} "
+            , "const tgt = e.target; "
+            , "if (tgt.status == 200) { "
+            , "addTitle(div, tgt.response.infile); "
+            , "addDescription(div, tgt.response.spec); "
+            , "const vdiv = document.createElement('div'); "
+            , "div.appendChild(vdiv); "
+            , "vegaEmbed(vdiv, tgt.response.spec); "
+            , "} else { "
+            , "addText(div, 'Unable to load specification'); "
+            , "} "
+            , "div.style.display = 'block';"
+            , "} "
+            , "function addText(parent, text) { "
+            , "parent.appendChild(document.createTextNode(text)); "
+            , "} "
+            , "function addTitle(div, infile) { "
+            , "const el = document.createElement('p'); "
+            , "el.setAttribute('class', 'location'); "
+            , "addText(el, 'File: ' + infile); "
+            , "div.appendChild(el); "
+            , "const close = document.createElement('span'); "
+            , "close.setAttribute('class', 'close'); "
+            , "addText(close, '[X]'); "
+            , "el.appendChild(close); "
+            , "close.addEventListener('click', (ev) => { "
+            , "div.style.display = 'none'; "
+            , "while (div.firstChild) { "
+            , "div.removeChild(div.firstChild);"
+            , "} "
+            , "});"
+            , "}"
+            , "function addDescription(div, spec) { "
+            , "if (!spec.description || spec.description === '') { return; } "
+            , "const el = document.createElement('p'); "
+            , "el.setAttribute('class', 'description'); "
+            , "addText(el, spec.description); "
+            , "div.appendChild(el); "
+            , "}"
+            ]
+  in (H.script ! A.type_ "text/javascript") (mconcat cts)
+
+
+inlineCSS :: H.Html
+inlineCSS =
+  let cts = [ "#vizview { "
+            , "background: white; "
+            , "border: 2px solid rgba(0, 0, 0, 0.6); "
+            , "display: none; "
+            , "left: 2em; "
+            , "overflow: hidden; "
+            , "padding: 1em; "
+            , "position: fixed; "
+            , "top: 2em; "
+            , "} "
+            , "p.location { "
+            , "background: rgba(0, 0, 0, 0.2);"
+            , "font-weight: bold; "
+            , "margin: -1em; "
+            , "margin-bottom: 1em; "
+            , "padding: 0.5em; "
+            , "} "
+            , ".close { "
+            , "float: right; "
+            , "}"
+            ]
+  in (H.style ! A.type_ "text/css") (mconcat cts)
+
+
+showDir ::
+  FilePath
+  -> ([FilePath], [(FilePath, H.Html)])
+  -> ActionM ()
+showDir indir (subdirs, files) =
+  let atTop = indir == "."
+  
+      page = (H.docTypeHtml ! A.lang "en-US") $ do
+        H.head $ do
+          H.title (H.toHtml ("Files to view: " ++ indir))
+          vegaEmbed
+          inlineJS
+          inlineCSS
+
+        H.body $ do
+          H.h1 "Vega and Vega-Lite viewer"
           unless atTop (H.p (H.toHtml ("Directory: " ++ indir)))
-          H.ul $ do
-            unless atTop (makeLi "..")
-            forM_ (sort infiles) makeLi
 
-      toHref infile = H.toValue ("/display" </> indir </> infile)
-      
-      makeLi infile = H.li $ (H.a ! A.href (toHref infile)) (H.toHtml infile)
+          unless (null subdirs) $ do
+            H.h2 "Sub-directories"
+            H.ul $ do
+              unless atTop (makeLi indir "..")
+              forM_ subdirs (makeLi indir)
 
-  html (renderHtml page)
+          -- let's see how this basic setup works
+          --
+          -- TODO: might be nice to let users easily skip to next or
+          --       previous visualization when viewing one.
+          --
+          unless (null files) $ do
+            (H.div ! A.id "vizview") ""
+            (H.div ! A.id "vizlist") $ do
+              H.h2 "Visualizations"
+              H.table $ do
+                H.thead $
+                  H.tr $ do
+                    H.th "View page"
+                    H.th "View inline"
+                H.tbody $
+                  forM_ files $ \(f, _) ->
+                    H.tr $ do
+                      H.td (pageLink indir f)
+                      H.td (embedLink indir f)
+
+  in html (renderHtml page)
+
+
+dirPage :: FilePath -> ActionM ()
+dirPage indir = do
+
+  files <- liftIO (getFileContents indir)
+  case files of
+    ([], []) -> emptyDir indir
+    _ -> showDir indir files
+
+
+-- load up vega embed
+vegaEmbed :: H.Html
+vegaEmbed =
+  let load n = H.script ! A.src (mconcat [ "https://cdn.jsdelivr.net/npm/"
+                                         , n])
+
+  in do
+    load "vega@5" ""
+    load "vega-lite@3" ""
+    load "vega-embed@4" ""
 
 
 showPage :: FilePath -> ActionM ()
@@ -165,23 +389,18 @@ showPage infile = do
       -- information leak from this.
       --
       text (LT.pack emsg)
-      status status404
+      errorStatus
 
     Right spec ->
       let contents = createView spec "vega-vis"
           page = (H.docTypeHtml ! A.lang "en-US") $ do
             H.head $ do
               H.title "View a spec"
-              load "vega@5" ""
-              load "vega-lite@3" ""
-              load "vega-embed@4" ""
+              vegaEmbed
             H.body $ do
               H.h1 "View Vega or Vega-Lite with Vega Embed"
               H.p $ H.toHtml (mconcat ["Go to ", parentLink])
               contents
-
-          load n = H.script ! A.src (mconcat [ "https://cdn.jsdelivr.net/npm/"
-                                             , n])
 
           dirName = H.toValue ("/display" </> takeDirectory infile)
           parentLink = (H.a ! A.href dirName) "parent directory"
@@ -197,6 +416,22 @@ displayPage infile = do
     else showPage infile
     
 
+-- Return data needed to display this file.
+--
+embedPage :: FilePath -> ActionM ()
+embedPage infile = do
+  espec <- liftIO (readSpec infile)
+  case espec of
+    Right (Spec o _) -> json (object [ "spec" .= Object o
+                                     , "infile" .= infile
+                                     ])
+    _ -> errorStatus
+
+
+errorStatus :: ActionM ()
+errorStatus = status status404
+
+
 webapp :: ScottyM ()
 webapp = do
 
@@ -210,9 +445,11 @@ webapp = do
     infile <- param "1"
     displayPage infile
 
-  notFound $ do
-    status status404
-    pure ()
+  get (regex "^/embed/(.+)$") $ do
+    infile <- param "1"
+    embedPage infile
+
+  notFound errorStatus
 
 
 -- for now assume current directory  

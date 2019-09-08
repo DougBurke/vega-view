@@ -29,6 +29,15 @@ on port 8082 that can be used to view them at the URL
 
     http://localhost:8082/display/
 
+Visualizations can either be viewed as their own "page", or inline,
+which may be more useful when you have multiple plots to view.
+
+The aim is to be run in a a directory structure where most, if not
+all, the files are Vega or Vega-Lite specifications. This means that
+the web server tries to parse each file as JSON, which could cause
+memory- or time- issues if there are large non-JSON files in the
+directory tree.
+
 ## GHC support
 
 This is currently a **very basic** application, so will hopefully build
