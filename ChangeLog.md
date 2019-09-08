@@ -1,5 +1,10 @@
 # Changelog for vega-view
 
+## 0.2.0.2
+
+Bump base minimum version to supporg ghc 8 or later, to save
+hackage trying to build with older versions.
+
 ## 0.2.0.1
 
 Internal change to get it to build with ghc 8.2 and 8.0.

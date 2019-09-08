@@ -1,5 +1,5 @@
 name:           vega-view
-version:        0.2.0.1
+version:        0.2.0.2
 description:    Please see the README on GitHub at <https://github.com/DougBurke/vega-view#readme>
 homepage:       https://github.com/DougBurke/vega-view#readme
 bug-reports:    https://github.com/DougBurke/vega-view/issues
@@ -29,7 +29,7 @@ executable vegaview
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
                 aeson >= 1.1 && < 1.5
-              , base >=4.7 && <5
+              , base >= 4.9 && <5
               , blaze-html >= 0.7 && < 0.10
               , bytestring >= 0.10 && < 0.11
               , directory >= 1.2.5.0 && < 1.4
