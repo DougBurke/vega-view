@@ -196,7 +196,7 @@ makeLi indir infile = H.li (pageLink indir infile)
 embedLink :: FilePath -> FilePath -> H.Html
 embedLink indir infile =
   let toHref = H.toValue ("/embed" </> indir </> infile)
-      hdlr = "embed('" <> toHref <> "');"
+      hdlr = mconcat [ "embed('", toHref, "');" ]
 
   in (H.a ! A.href "#" ! A.onclick hdlr) (H.toHtml infile)
 

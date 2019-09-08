@@ -1,5 +1,9 @@
 # Changelog for vega-view
 
+## 0.2.0.1
+
+Internal change to get it to build with ghc 8.2 and 8.0.
+
 ## 0.2
 
 The directory view now displays all the visualizations in a directory,
