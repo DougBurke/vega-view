@@ -3,7 +3,8 @@
 ## 0.2.0.2
 
 Bump base minimum version to supporg ghc 8 or later, to save
-hackage trying to build with older versions.
+hackage trying to build with older versions. There is no user-visible
+change to version 0.2.
 
 ## 0.2.0.1
 

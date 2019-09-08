@@ -1,6 +1,13 @@
 name:           vega-view
 version:        0.2.0.2
-description:    Please see the README on GitHub at <https://github.com/DougBurke/vega-view#readme>
+synopsis:       Easily view Vega or Vega-Lite visualizations.
+description:    A web server that is used to view all the Vega and Vega-Lite
+                specifications in a directory, or sub-directory. It is similar
+                in overall scope to the
+                <https://github.com/vega/vega-desktop vega destkop>
+                tool. Please see the README on GitHub at
+                <https://github.com/DougBurke/vega-view#readme>
+category:       Visualization
 homepage:       https://github.com/DougBurke/vega-view#readme
 bug-reports:    https://github.com/DougBurke/vega-view/issues
 author:         Douglas Burke
