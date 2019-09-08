@@ -1,7 +1,10 @@
 # vega-view
 
 I am not 100% convinced this is a worthwhile project, but let's see how
-it goes.
+it goes. You can think of it as "I want
+[vega desktop](https://github.com/vega/vega-desktop) but don't want
+to install an electron application, so decided to write an inferior
+product" project.
 
 The aim is to make it easy to view
 [Vega](https://vega.github.io/vega/)
