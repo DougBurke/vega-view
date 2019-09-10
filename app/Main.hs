@@ -132,21 +132,219 @@ makeSpec infile = do
     Left _ -> pure Nothing
     Right s -> pure (Just (createView s (takeBaseName infile)))
 
+
+addTextJS, addTitleJS, addDescriptionJS :: [H.Html]
+
+addTextJS = [ "function addText(parent, text) { "
+            , "parent.appendChild(document.createTextNode(text)); "
+            , "} "
+            ]
+
+-- TODO: should parent node be emoved from DOM on close? depends on
+--       what page it is being used in
+addTitleJS = [ "function addTitle(div, infile) { "
+             , "const el = document.createElement('p'); "
+             , "el.setAttribute('class', 'location'); "
+             , "addText(el, 'File: ' + infile); "
+             , "div.appendChild(el); "
+             , "const close = document.createElement('span'); "
+             , "close.setAttribute('class', 'close'); "
+             , "el.appendChild(close); "
+             , "close.addEventListener('click', (ev) => { "
+             , "div.style.display = 'none'; "
+             , "while (div.firstChild) { "
+             , "div.removeChild(div.firstChild); "
+             , "} "
+             , "}); "
+             , "} "
+             ]
+
+addDescriptionJS =
+  [ "function addDescription(div, spec) { "
+  , "if (!spec.description || spec.description === '') { return; } "
+  , "const el = document.createElement('p'); "
+  , "el.setAttribute('class', 'description'); "
+  , "addText(el, spec.description); "
+  , "div.appendChild(el); "
+  , "} "
+  ]
+
+
+dragJS :: H.Html
+dragJS =
+  let cts = [ "function preventDefault(event) { event.preventDefault(); } "
+            , "window.addEventListener('dragenter', preventDefault, false); "
+            , "window.addEventListener('dragover', preventDefault); "
+            , "window.addEventListener('drop', handleDrop); "
+            , "function handleDrop(ev) { "
+            , "ev.preventDefault(); "
+            , "if (ev.dataTransfer.items) { "
+            , "for (var i = 0; i < ev.dataTransfer.items.length; i++) { "
+            , "if (ev.dataTransfer.items[i].kind === 'file') { "
+            , "readFromDrop(ev.dataTransfer.items[i].getAsFile()); "
+            , "} } } else { "
+            , "for (var i = 0; i < ev.dataTransfer.files.length; i++) { "
+            , "readFromDrop(ev.dataTransfer.files[i]); "
+            , "} } "
+            , "} "
+            , "function readFromDrop(file) { "
+            , "if (file.type !== 'application/json') { return; } "
+            , "const reader = new FileReader(); "
+            , "reader.onload = (event) => { embedSpec(file.name, event.target.result); } "
+            , "reader.onerror = (event) => { alert('Unable to read from ' + file.name); } "
+            , "reader.readAsText(file); "
+            , "}"
+            , "function embedSpec(filename, filects) { "
+            , "let spec;"
+            , "try { "
+            , "spec = JSON.parse(filects); "
+            , "} catch (error) { "
+            , "reportParseError(filename); "
+            , "return; "
+            , "} "
+            , "const parent = document.getElementById('vizlist'); "
+            , "if (addMode === 'single') { "
+            , "while (parent.firstChild) { "
+            , "parent.removeChild(parent.firstChild);"
+            , "} }"
+            , "const div = document.createElement('div'); "
+            , "div.setAttribute('class', 'vizview'); "
+            , "if (addMode === 'top') { "
+            , "parent.insertBefore(div, parent.firstChild); "
+            , "} else { parent.appendChild(div); } "
+            , "addTitle(div, filename); "
+            , "addDescription(div, spec); "
+            , "const vdiv = document.createElement('div'); "
+            , "div.appendChild(vdiv); "
+            , "vegaEmbed(vdiv, spec); "
+            , "div.style.display = 'block';"
+            , "} "
+            , "var addMode = 'top'; " -- should read from HTML or set HTML
+            , "document.getElementById('mode-select')."
+            , "addEventListener('change', (ev) => { "
+            , "const sel = ev.target; "
+            , "for (var i = 0; i < sel.length; i++) { "
+            , "if (sel[i].selected) { addMode = sel[i].value; break; } "
+            , "} "
+            , "}); "
+            -- do we want to report the details of the error?
+            -- be lazy and use an alert for now
+            , "function reportParseError(filename) { "
+            , "alert('Unable to parse ' + filename + ' as JSON'); "
+            , "} "
+            ] ++ addTextJS ++ addTitleJS ++ addDescriptionJS
+
+      
+      -- add newlines for debugging, although I've done something
+      -- stupid to require this -- TODO track down
+      ncts = concatMap (\n -> [n, "\n"]) cts
+      jsCts = mconcat ncts
+      
+      -- jsCts = mconcat cts
+
+  in (H.script ! A.type_ "text/javascript") jsCts
+
+
+closeCSS, descriptionCSS, locationCSS :: [H.Html]
+closeCSS = [ ".close { "
+           , "background: red; "
+           , "border-radius: 50%; "
+           , "cursor: pointer; "
+           , "float: left; "
+           , "height: 1em; "
+           , "margin-right: 0.5em; "
+           , "width: 1em; "
+           , "}"
+           ]
+
+descriptionCSS = [ "p.decription { "
+                 , "}"
+                 ]
+
+locationCSS = [ "p.location { "
+              , "background: rgba(0, 0, 0, 0.2);"
+              , "font-weight: bold; "
+              , "margin: -1em; "
+              , "margin-bottom: 1em; "
+              , "padding: 0.5em; "
+              , "} "
+              ]
+
+
+dragCSS :: H.Html
+dragCSS =
+  let cts = [ "body { margin: 0; } "
+            , ".vizview { "
+            , "background: white; "
+            , "border: 2px solid rgba(0, 0, 0, 0.6); "
+            , "margin: 0.5em; "
+            , "float: left; "
+            , "padding: 1em; "
+            , "} "
+            , "#infobar { "
+            , "background: rgb(120, 120, 200); "
+            , "color: white; "
+            , "font-family: sans-serif; "
+            , "padding: 0.5em; "
+            , "} "
+            , "#infobar #title { "
+            , "font-size: 150%; "
+            , "font-variant-caps: small-caps; "
+            , "margin-right: 2em; "
+            , "} "
+            , "#infobar label { "
+            , "margin-right: 0.5em; "
+            , "}"
+            , "#mainbar { "
+            , "padding: 1em; "
+            , "} "
+            ] ++ closeCSS ++ descriptionCSS ++ locationCSS
+
+  in (H.style ! A.type_ "text/css") (mconcat cts)
+
   
 indexPage :: H.Html
 indexPage =
   H.docTypeHtml ! A.lang "en-US" $ do
-    H.head (H.title "View a Vega or Vega-Lite specification")
+    H.head $ do
+      H.title "View a Vega or Vega-Lite specification"
+      vegaEmbed
+      dragCSS
 
     H.body $ do
-      H.h1 "View a Vega or Vega-Lite specification."
+      (H.div ! A.id "infobar") $ do
+        (H.span ! A.id "title") "View a Vega or Vega-Lite specification"
+        (H.label ! A.for "mode-select") "Drop mode:"
+        (H.select ! A.id "mode-select") $ do
+          (H.option ! A.value "single") "Single"
+          -- TODO: can get selected="" with this, but not selected as a
+          --       stand-alone attribute
+          (H.option ! A.value "top" ! A.selected "") "Add at start"
+          (H.option ! A.value "bottom") "Add to end"
 
-      H.p (mconcat [ "This is version "
-                   , H.toHtml (showVersion version)
-                   , " of vega-view. Go to "
-                   , (H.a ! A.href "/display/") "/display/"
-                   , " to see the available visualizations."
-                   ])
+      let elink url = H.a ! A.href url ! A.target "_blank"
+
+      (H.div ! A.id "mainbar") $ do
+        H.p (mconcat [ "This is version "
+                     , H.toHtml (showVersion version)
+                     , " of "
+                     , elink "https://github.com/DougBurke/vega-view#readme"
+                       "vega-view"
+                     , ". Go to "
+                     , (H.a ! A.href "/display/") "/display/"
+                     , " to see the available visualizations, or "
+                     , "drag files containing "
+                     , elink "https://vega.github.io/vega-lite/" "Vega"
+                     , " or "
+                     , elink "https://vega.github.io/vega-lite/" "Vega-Lite"
+                     , " visualizations onto this page to view them."
+                     ])
+
+        (H.div ! A.id "vizlist") ""
+
+      -- since too lazy to set up an onload handler, stick all the JS
+      -- here
+      dragJS
       
 
 -- Return the directories in ths directory, and the JSON files we
@@ -228,8 +426,8 @@ emptyDir indir =
 --
 -- TODO: allow the user to drag the window around
 --
-inlineJS :: H.Html
-inlineJS =
+embedJS :: H.Html
+embedJS =
   let cts = [ "function embed(path) { "
             , "var req = new XMLHttpRequest(); "
             , "req.addEventListener('load', embedSpec); "
@@ -254,38 +452,13 @@ inlineJS =
             , "} "
             , "div.style.display = 'block';"
             , "} "
-            , "function addText(parent, text) { "
-            , "parent.appendChild(document.createTextNode(text)); "
-            , "} "
-            , "function addTitle(div, infile) { "
-            , "const el = document.createElement('p'); "
-            , "el.setAttribute('class', 'location'); "
-            , "addText(el, 'File: ' + infile); "
-            , "div.appendChild(el); "
-            , "const close = document.createElement('span'); "
-            , "close.setAttribute('class', 'close'); "
-            , "addText(close, '[X]'); "
-            , "el.appendChild(close); "
-            , "close.addEventListener('click', (ev) => { "
-            , "div.style.display = 'none'; "
-            , "while (div.firstChild) { "
-            , "div.removeChild(div.firstChild);"
-            , "} "
-            , "});"
-            , "}"
-            , "function addDescription(div, spec) { "
-            , "if (!spec.description || spec.description === '') { return; } "
-            , "const el = document.createElement('p'); "
-            , "el.setAttribute('class', 'description'); "
-            , "addText(el, spec.description); "
-            , "div.appendChild(el); "
-            , "}"
-            ]
+            ] ++ addTextJS ++ addTitleJS ++ addDescriptionJS
+
   in (H.script ! A.type_ "text/javascript") (mconcat cts)
 
 
-inlineCSS :: H.Html
-inlineCSS =
+embedCSS :: H.Html
+embedCSS =
   let cts = [ "#vizview { "
             , "background: white; "
             , "border: 2px solid rgba(0, 0, 0, 0.6); "
@@ -296,17 +469,8 @@ inlineCSS =
             , "position: fixed; "
             , "top: 2em; "
             , "} "
-            , "p.location { "
-            , "background: rgba(0, 0, 0, 0.2);"
-            , "font-weight: bold; "
-            , "margin: -1em; "
-            , "margin-bottom: 1em; "
-            , "padding: 0.5em; "
-            , "} "
-            , ".close { "
-            , "float: right; "
-            , "}"
-            ]
+            ] ++ closeCSS ++ descriptionCSS ++ locationCSS
+
   in (H.style ! A.type_ "text/css") (mconcat cts)
 
 
@@ -321,8 +485,8 @@ showDir indir (subdirs, files) =
         H.head $ do
           H.title (H.toHtml ("Files to view: " ++ indir))
           vegaEmbed
-          inlineJS
-          inlineCSS
+          embedJS
+          embedCSS
 
         H.body $ do
           H.h1 "Vega and Vega-Lite viewer"

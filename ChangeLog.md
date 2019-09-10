@@ -1,5 +1,12 @@
 # Changelog for vega-view
 
+## 0.3.0.0
+
+Add drag-and-drop support to the main page. You can now drag in a file
+(or multiple files) and have their contents be displayed. There is a mode
+for selecting how new visualizations are added to the page: at the top
+(default), at the bottom, or clear-out any previous plots.
+
 ## 0.2.0.2
 
 Bump base minimum version to supporg ghc 8 or later, to save

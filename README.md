@@ -13,9 +13,12 @@ and
 specifications - i.e. the JSON representing a visualization - as
 a visualization. It relies on
 [Vega Embed](https://github.com/vega/vega-embed) to do all
-the hard work, and just provides a basic web server that will list the
-files in a given directory and, when selected, create the
-call to Vega Embed.
+the hard work, and just provides a basic web server that:
+
+ - you can drag-and-drop files onto to view them;
+ 
+ - and will list the files in a given directory and, when selected,
+   view them inline or on a separate page.
 
 ## License
 
