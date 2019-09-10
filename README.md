@@ -28,12 +28,16 @@ This is released under a BSD3 license.
 
 The server - called `vega-view` - should be run from the directory
 containing the specifications to view. It then provides a web server
-on port 8082 that can be used to view them at the URL
+on port 8082 that can be used to view them at the URLs
 
+    http://localhost:8082/
     http://localhost:8082/display/
 
-Visualizations can either be viewed as their own "page", or inline,
-which may be more useful when you have multiple plots to view.
+The first page lets you drag-and-drop files onto the page to view
+them. Thse second lets you browse the visualizations that are present
+in the diectory where you started the application. Thse can either be
+viewed as their own "page", or inline, which may be more useful when
+you have multiple plots to view.
 
 The aim is to be run in a a directory structure where most, if not
 all, the files are Vega or Vega-Lite specifications. This means that
