@@ -54,7 +54,8 @@ data Spec = Spec {
   }
 
 
--- Create HTML for the given specification
+-- Create HTML for the given specification; try to match embedSpec
+-- JS routines.
 --
 createView ::
   Spec
@@ -80,14 +81,15 @@ createView spec specId =
                       , H.toHtml (LB8.unpack (encode vis))
                       , ");"]
 
-  in (H.div ! A.class_ "spec") $ do
-    (H.p ! A.class_ "location") (H.toHtml (specPath spec))
+  in (H.div ! A.class_ "vizview") $ do
+    -- unlike embedSpec JS routines, do not add a close button
+    (H.p ! A.class_ "location") (H.toHtml ("File: " ++ specPath spec))
       
     case mDesc of
       Just desc -> (H.p ! A.class_ "description") (H.toHtml desc)
       Nothing -> pure ()
 
-    (H.div ! A.class_ "embed" ! A.id (H.toValue specId)) ""
+    (H.div ! A.id (H.toValue specId)) ""
     (H.script ! A.type_ "text/javascript") jsCts
 
 
@@ -257,7 +259,8 @@ closeCSS = [ ".close { "
            , "}"
            ]
 
-descriptionCSS = [ "p.decription { "
+descriptionCSS = [ "p.description { "
+                 , "text-align: center; "
                  , "}"
                  ]
 
@@ -271,26 +274,34 @@ locationCSS = [ "p.location { "
               ]
 
 
+pageSetupCSS :: [H.Html]
+pageSetupCSS = [ "body { margin: 0; } "
+               , "#infobar { "
+               , "background: rgb(120, 120, 200); "
+               , "color: white; "
+               , "font-family: sans-serif; "
+               , "padding: 0.5em; "
+               , "} "
+               , "#infobar #title { "
+               , "font-size: 150%; "
+               , "font-variant-caps: small-caps; "
+               , "margin-right: 2em; "
+               , "} "
+               , "#mainbar { "
+               , "padding: 1em; "
+               , "} "
+               ]
+
+
 dragCSS :: H.Html
 dragCSS =
-  let cts = [ "body { margin: 0; } "
-            , ".vizview { "
+  let cts = pageSetupCSS ++
+            [ ".vizview { "
             , "background: white; "
             , "border: 2px solid rgba(0, 0, 0, 0.6); "
             , "margin: 0.5em; "
             , "float: left; "
             , "padding: 1em; "
-            , "} "
-            , "#infobar { "
-            , "background: rgb(120, 120, 200); "
-            , "color: white; "
-            , "font-family: sans-serif; "
-            , "padding: 0.5em; "
-            , "} "
-            , "#infobar #title { "
-            , "font-size: 150%; "
-            , "font-variant-caps: small-caps; "
-            , "margin-right: 2em; "
             , "} "
             , "#infobar label { "
             , "margin-right: 0.5em; "
@@ -300,7 +311,7 @@ dragCSS =
             , "} "
             ] ++ closeCSS ++ descriptionCSS ++ locationCSS
 
-  in (H.style ! A.type_ "text/css") (mconcat cts)
+  in toCSS cts
 
   
 indexPage :: H.Html
@@ -391,6 +402,11 @@ pageLink indir infile =
 makeLi :: FilePath -> FilePath -> H.Html
 makeLi indir infile = H.li (pageLink indir infile)
 
+makeParentLi :: FilePath -> H.Html
+makeParentLi indir =
+  let toHref = H.toValue ("/display" </> indir </> "..")
+  in H.li ((H.a ! A.href toHref) "parent directory")
+
 embedLink :: FilePath -> FilePath -> H.Html
 embedLink indir infile =
   let toHref = H.toValue ("/embed" </> indir </> infile)
@@ -398,20 +414,30 @@ embedLink indir infile =
 
   in (H.a ! A.href "#" ! A.onclick hdlr) (H.toHtml infile)
 
+
+toCSS :: [H.Html] -> H.Html
+toCSS = (H.style ! A.type_ "text/css") . mconcat
+
+
 -- Nothing to see here; slightly different if base directory or not
 emptyDir :: FilePath -> ActionM ()
 emptyDir indir =
   let page = (H.docTypeHtml ! A.lang "en-US") $ do
-        H.head (H.title (H.toHtml ("Files to view: " ++ indir)))
-        H.body $ do
-          H.h1 "Vega and Vega-Lite viewer"
+        H.head $ do
+          H.title (H.toHtml ("Files to view: " ++ indir))
+          toCSS pageSetupCSS
 
-          if indir == "."
-            then H.p "There is nothing to see in the base directory!"
-            else do
-              H.p (H.toHtml ("Directory: " ++ indir))
-              H.p "There is nothing to see here!"
-              H.ul (makeLi indir "..")
+        H.body $ do
+          (H.div ! A.id "infobar") $ do
+            (H.span ! A.id "title") "Vega and Vega-Lite viewer"
+
+          (H.div ! A.id "mainbar") $
+            if indir == "."
+              then H.p "There is nothing to see in the base directory!"
+              else do
+                H.p (H.toHtml ("Directory: " ++ indir))
+                H.p "There is nothing to see here!"
+                H.ul (makeParentLi indir)
 
   in html (renderHtml page)
 
@@ -469,9 +495,9 @@ embedCSS =
             , "position: fixed; "
             , "top: 2em; "
             , "} "
-            ] ++ closeCSS ++ descriptionCSS ++ locationCSS
+            ] ++ closeCSS ++ descriptionCSS ++ locationCSS ++ pageSetupCSS
 
-  in (H.style ! A.type_ "text/css") (mconcat cts)
+  in toCSS cts
 
 
 showDir ::
@@ -489,34 +515,37 @@ showDir indir (subdirs, files) =
           embedCSS
 
         H.body $ do
-          H.h1 "Vega and Vega-Lite viewer"
-          unless atTop (H.p (H.toHtml ("Directory: " ++ indir)))
+          (H.div ! A.id "infobar") $ do
+            (H.span ! A.id "title") "Vega and Vega-Lite viewer"
 
-          unless (null subdirs) $ do
-            H.h2 "Sub-directories"
-            H.ul $ do
-              unless atTop (makeLi indir "..")
-              forM_ subdirs (makeLi indir)
+          (H.div ! A.id "mainbar") $ do
+            unless atTop (H.p (H.toHtml ("Directory: " ++ indir)))
 
-          -- let's see how this basic setup works
-          --
-          -- TODO: might be nice to let users easily skip to next or
-          --       previous visualization when viewing one.
-          --
-          unless (null files) $ do
-            (H.div ! A.id "vizview") ""
-            (H.div ! A.id "vizlist") $ do
-              H.h2 "Visualizations"
-              H.table $ do
-                H.thead $
-                  H.tr $ do
-                    H.th "View page"
-                    H.th "View inline"
-                H.tbody $
-                  forM_ files $ \(f, _) ->
+            unless (null subdirs) $ do
+              H.h2 "Sub-directories"
+              H.ul $ do
+                unless atTop (makeParentLi indir)
+                forM_ subdirs (makeLi indir)
+
+            -- let's see how this basic setup works
+            --
+            -- TODO: might be nice to let users easily skip to next or
+            --       previous visualization when viewing one.
+            --
+            unless (null files) $ do
+              (H.div ! A.id "vizview") ""
+              (H.div ! A.id "vizlist") $ do
+                H.h2 "Visualizations"
+                H.table $ do
+                  H.thead $
                     H.tr $ do
-                      H.td (pageLink indir f)
-                      H.td (embedLink indir f)
+                      H.th "View page"
+                      H.th "View inline"
+                  H.tbody $
+                    forM_ files $ \(f, _) ->
+                      H.tr $ do
+                        H.td (pageLink indir f)
+                        H.td (embedLink indir f)
 
   in html (renderHtml page)
 
@@ -561,10 +590,15 @@ showPage infile = do
             H.head $ do
               H.title "View a spec"
               vegaEmbed
+              dragCSS  -- don't need closeCSS, but near enough
+
             H.body $ do
-              H.h1 "View Vega or Vega-Lite with Vega Embed"
-              H.p $ H.toHtml (mconcat ["Go to ", parentLink])
-              contents
+              (H.div ! A.id "infobar") $ do
+                (H.span ! A.id "title") "Vega and Vega-Lite viewer"
+
+              (H.div ! A.id "mainbar") $ do
+                H.p $ H.toHtml (mconcat ["Go to ", parentLink])
+                contents
 
           dirName = H.toValue ("/display" </> takeDirectory infile)
           parentLink = (H.a ! A.href dirName) "parent directory"
