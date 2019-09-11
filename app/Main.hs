@@ -16,7 +16,9 @@ module Main where
 
 import qualified Data.ByteString.Lazy.Char8 as LB8
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
+import qualified Text.Blaze as B
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
@@ -179,6 +181,8 @@ addDescriptionJS =
   ]
 
 
+-- Do we want to hide the "swoosh" icon when a visualization is shown?
+--
 dragJS :: H.Html
 dragJS =
   let cts = [ "function preventDefault(event) { event.preventDefault(); } "
@@ -323,6 +327,11 @@ dragCSS =
             , "#mainbar { "
             , "padding: 1em; "
             , "} "
+            , "#mainbar #swoosh svg { "
+            , "fill: rgba(120, 120, 200, 0.2); "
+            , "height: 200px; "
+            , "width: 200px; "
+            , "} "
             ] ++ closeCSS ++ descriptionCSS ++ locationCSS
 
   in toCSS cts
@@ -366,6 +375,10 @@ indexPage =
                      ])
 
         (H.div ! A.id "vizlist") ""
+
+        -- embed the SVG directly so we can style it
+        (H.div ! A.id "swoosh")
+          (B.text swooshSVG)
 
       -- since too lazy to set up an onload handler, stick all the JS
       -- here
@@ -641,6 +654,40 @@ embedPage infile = do
                                      , "infile" .= infile
                                      ])
     _ -> errorStatus
+
+
+-- embed https://commons.wikimedia.org/wiki/File:Curved_Arrow.svg
+-- which is licensed under the Creative Commons CC0 1.0 Universal
+-- Public Domain Dedication
+--
+swooshSVG :: T.Text
+swooshSVG =
+  mconcat
+        [ "<svg"
+        , "   xmlns:dc=\"http://purl.org/dc/elements/1.1/\""
+        , "   xmlns:cc=\"http://creativecommons.org/ns#\""
+        , "   xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\""
+        , "   xmlns:svg=\"http://www.w3.org/2000/svg\""
+        , "   xmlns=\"http://www.w3.org/2000/svg\""
+        , "   xml:space=\"preserve\""
+        , "   enable-background=\"new 0 0 595.28 841.89\""
+        , "   viewBox=\"0 0 776.09175 693.66538\""
+        , "   height=\"693.66541\""
+        , "   width=\"776.0918\""
+        , "   y=\"0px\""
+        , "   x=\"0px\""
+        , "   id=\"Layer_1\""
+        , "   version=\"1.1\"><metadata"
+        , "     id=\"metadata11\"><rdf:RDF><cc:Work"
+        , "         rdf:about=\"\"><dc:format>image/svg+xml</dc:format><dc:type"
+        , "           rdf:resource=\"http://purl.org/dc/dcmitype/StillImage\" /><dc:title></dc:title></cc:Work></rdf:RDF></metadata><defs"
+        , "     id=\"defs9\" /><g"
+        , "     transform=\"matrix(2.7190747,0,0,3.1037754,-326.9763,-1172.9045)\""
+        , "     id=\"g3\"><path"
+        , "       style=\"clip-rule:evenodd;fill-rule:evenodd\""
+        , "       id=\"path5\""
+        , "       d=\"m 130.838,381.118 c 1.125,28.749 5.277,54.82 12.695,78.018 7.205,22.53 18.847,40.222 36.812,53.747 52.018,39.16 153.369,16.572 153.369,16.572 l -4.632,-32.843 72.918,42.778 -58.597,58.775 -3.85,-27.303 c 0,0 -100.347,18.529 -163.905,-34.881 -37.659,-31.646 -53.293,-84.021 -51.593,-153.962 0.266,-0.247 4.728,-0.908 6.783,-0.901 z\" /></g></svg>"
+        ]
 
 
 errorStatus :: ActionM ()

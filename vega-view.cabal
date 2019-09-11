@@ -1,5 +1,5 @@
 name:           vega-view
-version:        0.3.0.1
+version:        0.3.0.2
 synopsis:       Easily view Vega or Vega-Lite visualizations.
 description:    A web server that is used to view all the Vega and Vega-Lite
                 specifications in a directory, or sub-directory. It is similar
@@ -38,6 +38,7 @@ executable vegaview
                 aeson >= 1.1 && < 1.5
               , base >= 4.9 && <5
               , blaze-html >= 0.7 && < 0.10
+              , blaze-markup >= 0.6 && < 0.9
               , bytestring >= 0.10 && < 0.11
               , directory >= 1.2.5.0 && < 1.4
               , filepath >= 1.4 && < 1.5
