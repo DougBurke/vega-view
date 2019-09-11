@@ -43,6 +43,13 @@ import Web.Scotty (ScottyM, ActionM
 
 import Paths_vega_view (version)
 
+pageTitle :: H.Html
+pageTitle = (H.span ! A.id "title") "Vega and Vega-Lite viewer"
+
+homeLink :: H.Html
+homeLink = (H.a ! A.id "homeLink" ! A.href "/") "Home"
+
+
 -- Represent a Vega or Vega-Lite sepcification, which has
 -- to be a Javascript object. Other than checking that we
 -- have an object, there is no other validation of the
@@ -287,6 +294,13 @@ pageSetupCSS = [ "body { margin: 0; } "
                , "font-variant-caps: small-caps; "
                , "margin-right: 2em; "
                , "} "
+               , "#infobar #homeLink { "
+               , "color: white; "
+               , "text-decoration: none; "
+               , "} "
+               , "#homeLink:hover { "
+               , "border-bottom: 2px solid white; "
+               , "} "
                , "#mainbar { "
                , "padding: 1em; "
                , "} "
@@ -324,7 +338,7 @@ indexPage =
 
     H.body $ do
       (H.div ! A.id "infobar") $ do
-        (H.span ! A.id "title") "View a Vega or Vega-Lite specification"
+        pageTitle
         (H.label ! A.for "mode-select") "Drop mode:"
         (H.select ! A.id "mode-select") $ do
           (H.option ! A.value "single") "Single"
@@ -429,7 +443,8 @@ emptyDir indir =
 
         H.body $ do
           (H.div ! A.id "infobar") $ do
-            (H.span ! A.id "title") "Vega and Vega-Lite viewer"
+            pageTitle
+            homeLink
 
           (H.div ! A.id "mainbar") $
             if indir == "."
@@ -516,7 +531,8 @@ showDir indir (subdirs, files) =
 
         H.body $ do
           (H.div ! A.id "infobar") $ do
-            (H.span ! A.id "title") "Vega and Vega-Lite viewer"
+            pageTitle
+            homeLink
 
           (H.div ! A.id "mainbar") $ do
             unless atTop (H.p (H.toHtml ("Directory: " ++ indir)))
@@ -594,7 +610,8 @@ showPage infile = do
 
             H.body $ do
               (H.div ! A.id "infobar") $ do
-                (H.span ! A.id "title") "Vega and Vega-Lite viewer"
+                pageTitle
+                homeLink
 
               (H.div ! A.id "mainbar") $ do
                 H.p $ H.toHtml (mconcat ["Go to ", parentLink])

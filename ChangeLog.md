@@ -1,5 +1,9 @@
 # Changelog for vega-view
 
+## 0.3.0.2
+
+Add a link back to the "home page" in the page header.
+
 ## 0.3.0.1
 
 Tweak the styling on some of the pages to use the "new look"™.
