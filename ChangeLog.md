@@ -4,6 +4,9 @@
 
 Add a link back to the "home page" in the page header.
 
+The home page has a swooshy icon on it, to try and visually indicate
+that you can drag onto the page.
+
 ## 0.3.0.1
 
 Tweak the styling on some of the pages to use the "new look"™.
