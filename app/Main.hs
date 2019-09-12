@@ -378,7 +378,7 @@ indexPage =
 
         -- embed the SVG directly so we can style it
         (H.div ! A.id "swoosh")
-          (B.text swooshSVG)
+          (B.preEscapedText swooshSVG)
 
       -- since too lazy to set up an onload handler, stick all the JS
       -- here

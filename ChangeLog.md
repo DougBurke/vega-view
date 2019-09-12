@@ -1,5 +1,11 @@
 # Changelog for vega-view
 
+## 0.3.0.3
+
+Oops: chaning from a bytestring to a text during development caused
+"problems". There really should be a swooshy icon on the home page now,
+and the a text rendering of the SVG...
+
 ## 0.3.0.2
 
 Add a link back to the "home page" in the page header.
