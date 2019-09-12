@@ -9,7 +9,7 @@ a JSON file or some other issue).
 A drag-and-drop page could be added, as could and endpoint to which
 you post a specification.
 
-The code could be refactored to be a SPA.
+The code could be refactored to be a SPA, but does it need to be?
 
 -}
 module Main where
@@ -33,7 +33,7 @@ import Data.Maybe (catMaybes)
 import Data.Version (showVersion)
 import Network.HTTP.Types (status404)
 import System.Directory (doesDirectoryExist, listDirectory)
-import System.FilePath ((</>), takeBaseName, takeDirectory)
+import System.FilePath ((</>), takeDirectory, takeFileName)
 import Text.Blaze.Html5 ((!))
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Scotty (ScottyM, ActionM
@@ -141,7 +141,7 @@ makeSpec infile = do
   espec <- readSpec infile
   case espec of
     Left _ -> pure Nothing
-    Right s -> pure (Just (createView s (takeBaseName infile)))
+    Right s -> pure (Just (createView s infile))
 
 
 addTextJS, addTitleJS, addDescriptionJS :: [H.Html]
@@ -424,7 +424,8 @@ getFileContents indir = do
 pageLink :: FilePath -> H.Html
 pageLink infile =
   let toHref = H.toValue ("/display" </> infile)
-  in (H.a ! A.href toHref) (H.toHtml infile)
+      toText = H.toHtml (takeFileName infile)
+  in (H.a ! A.href toHref) toText
 
 makeLi :: FilePath -> H.Html
 makeLi infile = H.li (pageLink infile)
@@ -438,9 +439,10 @@ makeParentLink indir =
 embedLink :: FilePath -> H.Html
 embedLink infile =
   let toHref = H.toValue ("/embed" </> infile)
+      toText = H.toHtml (takeFileName infile)
       hdlr = mconcat [ "embed('", toHref, "');" ]
 
-  in (H.a ! A.href "#" ! A.onclick hdlr) (H.toHtml infile)
+  in (H.a ! A.href "#" ! A.onclick hdlr) toText
 
 
 toCSS :: [H.Html] -> H.Html
@@ -539,8 +541,9 @@ showDir indir (subdirs, files) =
       page = (H.docTypeHtml ! A.lang "en-US") $ do
         H.head $ do
           H.title (H.toHtml ("Files to view: " ++ indir))
-          vegaEmbed
-          embedJS
+          unless (null files) $ do
+            vegaEmbed
+            embedJS
           embedCSS
 
         H.body $ do

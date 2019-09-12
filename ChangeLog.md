@@ -1,5 +1,10 @@
 # Changelog for vega-view
 
+## 0.3.0.5
+
+Removed paths from file names in the directory listings, and also stopped
+dropping their suffixes.
+
 ## 0.3.0.4
 
 Fixed directory browsing: previously things didn't work out so well if
