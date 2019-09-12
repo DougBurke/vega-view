@@ -84,11 +84,18 @@ createView spec specId =
                 Just (String d) -> Just d
                 _ -> Nothing
 
-      jsCts = mconcat [ "vegaEmbed('#"
+      jsCts = mconcat [ "const vdiv = document.getElementById('"
                       , H.toHtml specId
-                      , "', "
+                      , "'); "
+                      , "const vopts = { downloadFileName: '"
+                      , H.toHtml (specPath spec)
+                      , "' }; "
+                      , "vegaEmbed(vdiv, "
                       , H.toHtml (LB8.unpack (encode vis))
-                      , ");"]
+                      , ", vopts).catch((err) => { "
+                      , "vdiv.appendChild(document.createTextNode(err)); "
+                      , "vdiv.setAttribute('class', 'vega-error'); "
+                      , "});"]
 
   in (H.div ! A.class_ "vizview") $ do
     -- unlike embedSpec JS routines, do not add a close button
@@ -229,7 +236,11 @@ dragJS =
             , "addDescription(div, spec); "
             , "const vdiv = document.createElement('div'); "
             , "div.appendChild(vdiv); "
-            , "vegaEmbed(vdiv, spec); "
+            , "const vopts = { downloadFileName: filename }; "
+            , "vegaEmbed(vdiv, spec, vopts).catch((err) => { "
+            , "vdiv.appendChild(document.createTextNode(err)); "
+            , "vdiv.setAttribute('class', 'vega-error'); "
+            , "}); "
             , "div.style.display = 'block';"
             , "} "
             , "var addMode = 'top'; " -- should read from HTML or set HTML
@@ -311,6 +322,21 @@ pageSetupCSS = [ "body { margin: 0; } "
                ]
 
 
+-- not convinced using the header color is a good thing to indicate
+-- an error; should be visually distinct
+--
+vegaErrorCSS :: [H.Html]
+vegaErrorCSS = [ ".vega-error { "
+               , "background: rgba(120, 120, 200); "
+               , "color: white; "
+               , "font-family: monospace; "
+               , "font-size: 150%; "
+               , "font-weight: bold; "
+               , "padding: 0.5em; "
+               , "} "
+               ]
+
+
 dragCSS :: H.Html
 dragCSS =
   let cts = pageSetupCSS ++
@@ -332,7 +358,7 @@ dragCSS =
             , "height: 200px; "
             , "width: 200px; "
             , "} "
-            ] ++ closeCSS ++ descriptionCSS ++ locationCSS
+            ] ++ closeCSS ++ descriptionCSS ++ locationCSS ++ vegaErrorCSS
 
   in toCSS cts
 
@@ -475,7 +501,7 @@ emptyDir indir =
 
 -- Code to display a specification inline
 --
--- Would be a lot nicer to embed the code from a file at build time
+-- Would be a lot nicer to embed the JS code from a file at build time
 -- or to load at run time.
 --
 -- TODO: set max width/height of the visualization window so that
@@ -499,11 +525,15 @@ embedJS =
             , "} "
             , "const tgt = e.target; "
             , "if (tgt.status == 200) { "
+            , "const vopts = { downloadFileName: tgt.response.infile }; "
             , "addTitle(div, tgt.response.infile); "
             , "addDescription(div, tgt.response.spec); "
             , "const vdiv = document.createElement('div'); "
             , "div.appendChild(vdiv); "
-            , "vegaEmbed(vdiv, tgt.response.spec); "
+            , "vegaEmbed(vdiv, tgt.response.spec, vopts).catch((err) => { "
+            , "vdiv.appendChild(document.createTextNode(err)); "
+            , "vdiv.setAttribute('class', 'vega-error'); "
+            , "}); "
             , "} else { "
             , "addText(div, 'Unable to load specification'); "
             , "} "
@@ -526,7 +556,8 @@ embedCSS =
             , "position: fixed; "
             , "top: 2em; "
             , "} "
-            ] ++ closeCSS ++ descriptionCSS ++ locationCSS ++ pageSetupCSS
+            ] ++ closeCSS ++ descriptionCSS ++
+            locationCSS ++ pageSetupCSS ++ vegaErrorCSS
 
   in toCSS cts
 

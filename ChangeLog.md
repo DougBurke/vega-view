@@ -2,6 +2,16 @@
 
 ## 0.3.0.5
 
+Improved error handling when displaying Vega or Vega-Lite specifications,
+in that the error message from vega-embed is now shown to the viewer rather
+than hidden away in the console log. It is not clear to me how useful these
+error messages are, other than just to say "hey, something went wrong".
+
+The filenames for the export-to-svg/png options now uses the specification
+file name rather than the default "visualization". There is no attempt to
+remove any suffixes from the file name, so "foo.vg.json" will end up as
+"foo.vg.json.svg" (or .png).
+
 Removed paths from file names in the directory listings, and also stopped
 dropping their suffixes.
 
