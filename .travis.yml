@@ -41,7 +41,8 @@ install:
       ghc --version
       cabal --version
       cabal new-update
-      cabal new-build --enable-tests --enable-benchmarks
+      # cabal new-build --enable-tests --enable-benchmarks
+      cabal new-build
     else
       # install stack
       curl -sSL https://get.haskellstack.org/ | sh
@@ -55,9 +56,11 @@ script:
   - |
     if [ -z "$STACK_YAML" ]; then
       cd $TRAVIS_BUILD_DIR
-      cabal new-test --enable-tests
+      # cabal new-test --enable-tests
+      echo "no-op"
     else
-      stack test --system-ghc
+      # stack test --system-ghc
+      echo "no-op"
     fi
 
 notifications:
