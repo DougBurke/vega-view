@@ -1,5 +1,11 @@
 # Changelog for vega-view
 
+## 0.3.0.4
+
+Fixed directory browsing: previously things didn't work out so well if
+there were no Vega or Vega-Lite visualizations in the working directory,
+but now you can properly recurse into sub-directories.
+
 ## 0.3.0.3
 
 Oops: chaning from a bytestring to a text during development caused

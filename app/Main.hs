@@ -396,7 +396,7 @@ getFileContents ::
   --
 getFileContents indir = do
 
-  infiles <- sort <$> listDirectory indir
+  infiles <- map (indir </>) . sort <$> listDirectory indir
   dirFlags <- mapM doesDirectoryExist infiles
 
   let files = zip dirFlags infiles
@@ -413,7 +413,7 @@ getFileContents indir = do
         case mspec of
           Just h -> pure (Just (f, h))
           _ -> pure Nothing
-  
+
   mspecs <- mapM go otherNames
 
   let specs = catMaybes mspecs
@@ -421,22 +421,23 @@ getFileContents indir = do
   pure (dirNames, specs)
 
 
-pageLink :: FilePath -> FilePath -> H.Html
-pageLink indir infile =
-  let toHref = H.toValue ("/display" </> indir </> infile)
+pageLink :: FilePath -> H.Html
+pageLink infile =
+  let toHref = H.toValue ("/display" </> infile)
   in (H.a ! A.href toHref) (H.toHtml infile)
 
-makeLi :: FilePath -> FilePath -> H.Html
-makeLi indir infile = H.li (pageLink indir infile)
+makeLi :: FilePath -> H.Html
+makeLi infile = H.li (pageLink infile)
 
-makeParentLi :: FilePath -> H.Html
-makeParentLi indir =
+makeParentLink :: FilePath -> H.Html
+makeParentLink indir =
   let toHref = H.toValue ("/display" </> indir </> "..")
-  in H.li ((H.a ! A.href toHref) "parent directory")
+  in (H.a ! A.href toHref) "parent directory"
 
-embedLink :: FilePath -> FilePath -> H.Html
-embedLink indir infile =
-  let toHref = H.toValue ("/embed" </> indir </> infile)
+
+embedLink :: FilePath -> H.Html
+embedLink infile =
+  let toHref = H.toValue ("/embed" </> infile)
       hdlr = mconcat [ "embed('", toHref, "');" ]
 
   in (H.a ! A.href "#" ! A.onclick hdlr) (H.toHtml infile)
@@ -464,8 +465,8 @@ emptyDir indir =
               then H.p "There is nothing to see in the base directory!"
               else do
                 H.p (H.toHtml ("Directory: " ++ indir))
+                H.p (makeParentLink indir)
                 H.p "There is nothing to see here!"
-                H.ul (makeParentLi indir)
 
   in html (renderHtml page)
 
@@ -548,13 +549,13 @@ showDir indir (subdirs, files) =
             homeLink
 
           (H.div ! A.id "mainbar") $ do
-            unless atTop (H.p (H.toHtml ("Directory: " ++ indir)))
+            unless atTop $ do
+              H.p (H.toHtml ("Directory: " ++ indir))
+              H.p (makeParentLink indir)
 
             unless (null subdirs) $ do
               H.h2 "Sub-directories"
-              H.ul $ do
-                unless atTop (makeParentLi indir)
-                forM_ subdirs (makeLi indir)
+              H.ul (forM_ subdirs makeLi)
 
             -- let's see how this basic setup works
             --
@@ -573,8 +574,8 @@ showDir indir (subdirs, files) =
                   H.tbody $
                     forM_ files $ \(f, _) ->
                       H.tr $ do
-                        H.td (pageLink indir f)
-                        H.td (embedLink indir f)
+                        H.td (pageLink f)
+                        H.td (embedLink f)
 
   in html (renderHtml page)
 
