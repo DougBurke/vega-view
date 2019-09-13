@@ -20,6 +20,8 @@ the hard work, and just provides a basic web server that:
  - and will list the files in a given directory and, when selected,
    view them inline or on a separate page.
 
+![A Vega-Lite specification being dragged from a file browser and dropped onto the index page of the vega-view web server](https://raw.githubusercontent.com/DougBurke/vega-view/master/images/vega-view-drag-n-drop.gif)
+
 ## License
 
 This is released under a BSD3 license.
