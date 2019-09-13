@@ -30,10 +30,14 @@ This is released under a BSD3 license.
 
 The server - called `vega-view` - should be run from the directory
 containing the specifications to view. It then provides a web server
-on port 8082 that can be used to view them at the URLs
+on port 8082 (unless the `PORT` environment variable is set, in
+which case this value is used instead) that can be used to view them
+at the URLs
 
     http://localhost:8082/
     http://localhost:8082/display/
+
+(where `8082` should be replaced by the value of `$PORT` if set).
 
 The first page lets you drag-and-drop files onto the page to view
 them. Thse second lets you browse the visualizations that are present

@@ -1,13 +1,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {-
-A very-basic viewer for Vega and Vega-Lite specfications. You
-can browse from the current working directory, and view any
-individual specification via Vega Embed (or an error if it isn't
-a JSON file or some other issue).
 
-A drag-and-drop page could be added, as could and endpoint to which
-you post a specification.
+Usage:
+
+   ./vega-view
+
+will create web pages at
+
+  http://localhost:n/
+  http://localhost:n/display/
+
+where n is 8082 unless the PORT environment variable is set to an
+integer, in which case that will be used.
+
+The top-level page can be used to drag-and-drop specifications and
+view them, and supports several modes:
+
+  - add to start
+  - add to end
+  - only show the current visualization
+
+whereas the display/ directory lets you view any Vega and Vega-Lite
+specfications in the working directory (or sub-directories), either
+"in line" (i.e. in the page) or as a separate page.
 
 The code could be refactored to be a SPA, but does it need to be?
 
@@ -33,6 +49,7 @@ import Data.Maybe (catMaybes)
 import Data.Version (showVersion)
 import Network.HTTP.Types (status404)
 import System.Directory (doesDirectoryExist, listDirectory)
+import System.Environment (lookupEnv)
 import System.FilePath ((</>), takeDirectory, takeFileName)
 import Text.Blaze.Html5 ((!))
 import Text.Blaze.Html.Renderer.Text (renderHtml)
@@ -751,4 +768,10 @@ webapp = do
 
 -- for now assume current directory  
 main :: IO ()
-main = scotty 8082 webapp
+main = do
+  mPortStr <- lookupEnv "PORT"
+  let port = case read <$> mPortStr of
+               Just n -> n
+               _ -> 8082
+
+  scotty port webapp

@@ -1,5 +1,12 @@
 # Changelog for vega-view
 
+## 0.3.1.0
+
+The default port is 8082 but this can be changed by setting the PORT
+environment variable before running the server. An invalid setting, or
+one already in use, will cause the application to fail with a less-than
+graceful error message.
+
 ## 0.3.0.5
 
 Improved error handling when displaying Vega or Vega-Lite specifications,
