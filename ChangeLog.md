@@ -1,5 +1,11 @@
 # Changelog for vega-view
 
+## 0.3.1.1
+
+Change the styling of the "frame" used to contain a Vega or Vega-Lite
+visualization. The main change is to add a "hide" button (for the inline
+and drag-and-drop views), but there's also a few more-subtle changes.
+
 ## 0.3.1.0
 
 The default port is 8082 but this can be changed by setting the PORT

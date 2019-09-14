@@ -112,17 +112,20 @@ createView spec specId =
                       , ", vopts).catch((err) => { "
                       , "vdiv.appendChild(document.createTextNode(err)); "
                       , "vdiv.setAttribute('class', 'vega-error'); "
-                      , "});"]
+                      , "});"
+                      ]
 
   in (H.div ! A.class_ "vizview") $ do
-    -- unlike embedSpec JS routines, do not add a close button
+    -- unlike embedSpec JS routines, do not add close or hide buttons
     (H.p ! A.class_ "location") (H.toHtml ("File: " ++ specPath spec))
-      
-    case mDesc of
-      Just desc -> (H.p ! A.class_ "description") (H.toHtml desc)
-      Nothing -> pure ()
 
-    (H.div ! A.id (H.toValue specId)) ""
+    (H.div ! A.class_ "contents") $ do
+      case mDesc of
+        Just desc -> (H.p ! A.class_ "description") (H.toHtml desc)
+        Nothing -> pure ()
+
+      (H.div ! A.id (H.toValue specId)) ""
+
     (H.script ! A.type_ "text/javascript") jsCts
 
 
@@ -177,7 +180,7 @@ addTextJS = [ "function addText(parent, text) { "
 
 -- TODO: should parent node be emoved from DOM on close? depends on
 --       what page it is being used in
-addTitleJS = [ "function addTitle(div, infile) { "
+addTitleJS = [ "function addTitle(div, contents, infile) { "
              , "const el = document.createElement('p'); "
              , "el.setAttribute('class', 'location'); "
              , "addText(el, 'File: ' + infile); "
@@ -190,6 +193,16 @@ addTitleJS = [ "function addTitle(div, infile) { "
              , "while (div.firstChild) { "
              , "div.removeChild(div.firstChild); "
              , "} "
+             , "}); "
+             , "const hide = document.createElement('hide'); "
+             , "hide.setAttribute('class', 'hide'); "
+             , "el.appendChild(hide); "
+             , "hide.addEventListener('click', (ev) => { "
+             , "if (contents.style.display !== 'none') { "
+             , "contents.style.display = 'none'; "
+             , "hide.setAttribute('class', 'show'); } else { "
+             , "contents.style.display = 'block'; "
+             , "hide.setAttribute('class', 'hide'); } "
              , "}); "
              , "} "
              ]
@@ -249,10 +262,13 @@ dragJS =
             , "if (addMode === 'top') { "
             , "parent.insertBefore(div, parent.firstChild); "
             , "} else { parent.appendChild(div); } "
-            , "addTitle(div, filename); "
-            , "addDescription(div, spec); "
+            , "const contents = document.createElement('div'); "
+            , "contents.setAttribute('class', 'contents'); "
+            , "addTitle(div, contents, filename); "
+            , "div.appendChild(contents); "
+            , "addDescription(contents, spec); "
             , "const vdiv = document.createElement('div'); "
-            , "div.appendChild(vdiv); "
+            , "contents.appendChild(vdiv); "
             , "const vopts = { downloadFileName: filename }; "
             , "vegaEmbed(vdiv, spec, vopts).catch((err) => { "
             , "vdiv.appendChild(document.createTextNode(err)); "
@@ -286,29 +302,66 @@ dragJS =
   in (H.script ! A.type_ "text/javascript") jsCts
 
 
-closeCSS, descriptionCSS, locationCSS :: [H.Html]
+closeCSS, hideCSS, descriptionCSS, locationCSS :: [H.Html]
 closeCSS = [ ".close { "
-           , "background: red; "
+           , "background: rgba(230, 20, 20, 0.6); "
            , "border-radius: 50%; "
            , "cursor: pointer; "
            , "float: left; "
            , "height: 1em; "
            , "margin-right: 0.5em; "
            , "width: 1em; "
-           , "}"
+           , "} "
+           , ".close:hover { "
+           , "background: rgba(230, 20, 20, 1); "
+           , "} "
            ]
+
+hideCSS = [ ".hide { "
+          , "border-left: 0.5em solid transparent; "
+          , "border-right: 0.5em solid transparent; "
+          , "border-top: 1em solid rgba(255, 165, 0, 0.6); "
+          , "cursor: pointer; "
+          , "float: left; "
+          , "height: 0; "
+          , "margin-right: 0.5em; "
+          , "width: 0; "
+          , "} "
+          , ".show { "
+          , "border-left: 0.5em solid transparent; "
+          , "border-right: 0.5em solid transparent; "
+          , "border-bottom: 1em solid rgba(255, 165, 0, 0.6); "
+          , "cursor: pointer; "
+          , "float: left; "
+          , "height: 0; "
+          , "margin-right: 0.5em; "
+          , "width: 0; "
+          , "} "
+          , ".hide:hover { "
+          , "border-top: 1em solid rgba(255, 165, 0, 1); "
+          , "} "
+          , ".show:hover { "
+          , "border-bottom: 1em solid rgba(255, 165, 0, 1); "
+          , "} "
+          ]
 
 descriptionCSS = [ "p.description { "
                  , "text-align: center; "
                  , "}"
                  ]
 
+-- combine location and contents here
+--
 locationCSS = [ "p.location { "
               , "background: rgba(0, 0, 0, 0.2);"
               , "font-weight: bold; "
               , "margin: -1em; "
-              , "margin-bottom: 1em; "
+              , "margin-bottom: 0; "
               , "padding: 0.5em; "
+              , "} "
+              , "div.contents { "
+              , "margin: 0; "
+              , "margin-top: 1em; "
               , "} "
               ]
 
@@ -354,15 +407,26 @@ vegaErrorCSS = [ ".vega-error { "
                ]
 
 
+vizCSS :: [H.Html]
+vizCSS = [ ".vizview { "
+         , "background-color: white; "
+         , "border: 2px solid rgba(0, 0, 0, 0.4); "
+         , "border-radius: 0.5em; "
+         , "box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2); "
+         , "padding: 1em; "
+         , "} "
+         , ".vizview:hover { "
+         , "border-color: rgba(0, 0, 0, 0.8); "
+         , "} "
+         ]
+
+
 dragCSS :: H.Html
 dragCSS =
   let cts = pageSetupCSS ++
             [ ".vizview { "
-            , "background: white; "
-            , "border: 2px solid rgba(0, 0, 0, 0.6); "
-            , "margin: 0.5em; "
             , "float: left; "
-            , "padding: 1em; "
+            , "margin: 0.5em; "
             , "} "
             , "#infobar label { "
             , "margin-right: 0.5em; "
@@ -375,7 +439,8 @@ dragCSS =
             , "height: 200px; "
             , "width: 200px; "
             , "} "
-            ] ++ closeCSS ++ descriptionCSS ++ locationCSS ++ vegaErrorCSS
+            ] ++ closeCSS ++ hideCSS ++ descriptionCSS ++
+            locationCSS ++ vegaErrorCSS ++ vizCSS
 
   in toCSS cts
 
@@ -543,10 +608,13 @@ embedJS =
             , "const tgt = e.target; "
             , "if (tgt.status == 200) { "
             , "const vopts = { downloadFileName: tgt.response.infile }; "
-            , "addTitle(div, tgt.response.infile); "
-            , "addDescription(div, tgt.response.spec); "
+            , "const contents = document.createElement('div'); "
+            , "contents.setAttribute('class', 'contents'); "
+            , "addTitle(div, contents, tgt.response.infile); "
+            , "div.appendChild(contents); "
+            , "addDescription(contents, tgt.response.spec); "
             , "const vdiv = document.createElement('div'); "
-            , "div.appendChild(vdiv); "
+            , "contents.appendChild(vdiv); "
             , "vegaEmbed(vdiv, tgt.response.spec, vopts).catch((err) => { "
             , "vdiv.appendChild(document.createTextNode(err)); "
             , "vdiv.setAttribute('class', 'vega-error'); "
@@ -563,18 +631,15 @@ embedJS =
 
 embedCSS :: H.Html
 embedCSS =
-  let cts = [ "#vizview { "
-            , "background: white; "
-            , "border: 2px solid rgba(0, 0, 0, 0.6); "
+  let cts = [ ".vizview { "
             , "display: none; "
             , "left: 2em; "
             , "overflow: hidden; "
-            , "padding: 1em; "
             , "position: fixed; "
             , "top: 2em; "
             , "} "
-            ] ++ closeCSS ++ descriptionCSS ++
-            locationCSS ++ pageSetupCSS ++ vegaErrorCSS
+            ] ++ closeCSS ++ hideCSS ++ descriptionCSS ++
+            locationCSS ++ pageSetupCSS ++ vegaErrorCSS ++ vizCSS
 
   in toCSS cts
 
@@ -614,7 +679,7 @@ showDir indir (subdirs, files) =
             --       previous visualization when viewing one.
             --
             unless (null files) $ do
-              (H.div ! A.id "vizview") ""
+              (H.div ! A.class_ "vizview" ! A.id "vizview") ""
               (H.div ! A.id "vizlist") $ do
                 H.h2 "Visualizations"
                 H.table $ do
