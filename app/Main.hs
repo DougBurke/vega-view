@@ -69,6 +69,11 @@ homeLink :: H.Html
 homeLink = (H.a ! A.id "homeLink" ! A.href "/") "Home"
 
 
+toCSS, toJS :: [H.Html] -> H.Html
+toCSS = (H.style ! A.type_ "text/css") . mconcat
+toJS = (H.script ! A.type_ "text/javascript") . mconcat
+
+
 -- Represent a Vega or Vega-Lite sepcification, which has
 -- to be a Javascript object. Other than checking that we
 -- have an object, there is no other validation of the
@@ -109,7 +114,10 @@ createView spec specId =
                       , "' }; "
                       , "vegaEmbed(vdiv, "
                       , H.toHtml (LB8.unpack (encode vis))
-                      , ", vopts).catch((err) => { "
+                      , ", vopts).then((result) => { "
+                        -- it's almost like I'm making this up as I go along
+                      , "resetLocationWidth(vdiv.parentElement.parentElement); "
+                      , "}).catch((err) => { "
                       , "vdiv.appendChild(document.createTextNode(err)); "
                       , "vdiv.setAttribute('class', 'vega-error'); "
                       , "});"
@@ -412,13 +420,29 @@ vizCSS = [ ".vizview { "
          , "background-color: white; "
          , "border: 2px solid rgba(0, 0, 0, 0.4); "
          , "border-radius: 0.5em; "
-         , "box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2); "
          , "padding: 1em; "
          , "} "
          , ".vizview:hover { "
          , "border-color: rgba(0, 0, 0, 0.8); "
+         , "box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2); "
          , "} "
          ]
+
+
+-- Handle header / main areas of the page
+sectionsCSS :: [H.Html]
+sectionsCSS = [ "#infobar label { "
+              , "margin-right: 0.5em; "
+              , "}"
+              , "#mainbar { "
+              , "padding: 1em; "
+              , "} "
+              , "#mainbar #swoosh svg { "
+              , "fill: rgba(120, 120, 200, 0.2); "
+              , "height: 200px; "
+              , "width: 200px; "
+              , "} "
+              ]
 
 
 dragCSS :: H.Html
@@ -428,23 +452,12 @@ dragCSS =
             , "float: left; "
             , "margin: 0.5em; "
             , "} "
-            , "#infobar label { "
-            , "margin-right: 0.5em; "
-            , "}"
-            , "#mainbar { "
-            , "padding: 1em; "
-            , "} "
-            , "#mainbar #swoosh svg { "
-            , "fill: rgba(120, 120, 200, 0.2); "
-            , "height: 200px; "
-            , "width: 200px; "
-            , "} "
             ] ++ closeCSS ++ hideCSS ++ descriptionCSS ++
-            locationCSS ++ vegaErrorCSS ++ vizCSS
+            locationCSS ++ vegaErrorCSS ++ sectionsCSS ++ vizCSS
 
   in toCSS cts
 
-  
+
 indexPage :: H.Html
 indexPage =
   H.docTypeHtml ! A.lang "en-US" $ do
@@ -553,10 +566,6 @@ embedLink infile =
   in (H.a ! A.href "#" ! A.onclick hdlr) toText
 
 
-toCSS :: [H.Html] -> H.Html
-toCSS = (H.style ! A.type_ "text/css") . mconcat
-
-
 -- Nothing to see here; slightly different if base directory or not
 emptyDir :: FilePath -> ActionM ()
 emptyDir indir =
@@ -634,7 +643,7 @@ embedCSS =
   let cts = [ ".vizview { "
             , "display: none; "
             , "left: 2em; "
-            , "overflow: hidden; "
+            -- , "overflow: hidden; "   why did I add this?
             , "position: fixed; "
             , "top: 2em; "
             , "} "
@@ -717,6 +726,45 @@ vegaEmbed =
     load "vega-embed@4" ""
 
 
+pageCSS :: H.Html
+pageCSS =
+  let cts = pageSetupCSS ++
+            [ ".vizview { "
+            , "overflow: auto; "
+            , "} "
+            , ".vizlist { "
+            , "display: flex; "
+            , "justify-content: space-around; "  -- not convinced about this
+            , "} "
+            ] ++ descriptionCSS ++
+            locationCSS ++ vegaErrorCSS ++ sectionsCSS ++ vizCSS
+
+  in toCSS cts
+
+
+-- change the "title" bar, containing the loction, but not any description,
+-- as want that to stay bouded by the starting bounding box, I think
+-- (so that it doesn't appear off-screen initially for a short-enough
+--  description, if centered).
+--
+--  I had originally thought I would have to call resetLocationWidth on
+--  a page resize, but it doesn't need to be, since the title is never
+--  going to need to be larger than the value the scrollWidth of the
+--  visualization.
+--
+pageJS :: H.Html
+pageJS =
+  let cts = [ "function resetLocationWidth(div) { "
+            , "const locs = div.getElementsByClassName('location'); "
+            , "if (locs.length === 0) { console.log('DBG: no location'); console.log({div}); return; } "
+            , "const loc = locs[0]; "
+            , "loc.style.width = div.scrollWidth + 'px'; "
+            , "} "
+            ]
+
+  in toJS cts
+
+
 showPage :: FilePath -> ActionM ()
 showPage infile = do
   espec <- liftIO (readSpec infile)
@@ -736,7 +784,8 @@ showPage infile = do
             H.head $ do
               H.title "View a spec"
               vegaEmbed
-              dragCSS  -- don't need closeCSS, but near enough
+              pageCSS
+              pageJS
 
             H.body $ do
               (H.div ! A.id "infobar") $ do
@@ -745,7 +794,7 @@ showPage infile = do
 
               (H.div ! A.id "mainbar") $ do
                 H.p $ H.toHtml (mconcat ["Go to ", parentLink])
-                contents
+                (H.div ! A.class_ "vizlist") contents
 
           dirName = H.toValue ("/display" </> takeDirectory infile)
           parentLink = (H.a ! A.href dirName) "parent directory"

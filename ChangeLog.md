@@ -1,5 +1,12 @@
 # Changelog for vega-view
 
+## 0.3.1.2
+
+The "view a visualization" page - i.e. /display/..path-to-spec - now
+adds a horizontal scroll bar if the visualization is too wide for the
+page. Unfortunately this doesn't happen on the drag-and-drop or inline
+views.
+
 ## 0.3.1.1
 
 Change the styling of the "frame" used to contain a Vega or Vega-Lite
