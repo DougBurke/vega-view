@@ -50,7 +50,7 @@ import Data.Version (showVersion)
 import Network.HTTP.Types (status404)
 import System.Directory (doesDirectoryExist, listDirectory)
 import System.Environment (lookupEnv)
-import System.FilePath ((</>), takeDirectory, takeFileName)
+import System.FilePath ((</>), splitFileName, takeFileName)
 import Text.Blaze.Html5 ((!))
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Scotty (ScottyM, ActionM
@@ -82,6 +82,9 @@ toJS = (H.script ! A.type_ "text/javascript") . mconcat
 data Spec = Spec {
   specVis :: Object
   , specPath :: FilePath
+    -- ^ the path to the file
+  , specFileName :: String
+    -- ^ the file name with no path
   }
 
 
@@ -110,7 +113,7 @@ createView spec specId =
                       , H.toHtml specId
                       , "'); "
                       , "const vopts = { downloadFileName: '"
-                      , H.toHtml (specPath spec)
+                      , H.toHtml (specFileName spec)
                       , "' }; "
                       , "vegaEmbed(vdiv, "
                       , H.toHtml (LB8.unpack (encode vis))
@@ -125,7 +128,7 @@ createView spec specId =
 
   in (H.div ! A.class_ "vizview") $ do
     -- unlike embedSpec JS routines, do not add close or hide buttons
-    (H.p ! A.class_ "location") (H.toHtml ("File: " ++ specPath spec))
+    (H.p ! A.class_ "location") (H.toHtml ("File: " ++ specFileName spec))
 
     (H.div ! A.class_ "contents") $ do
       case mDesc of
@@ -161,7 +164,9 @@ readSpec ::
 readSpec infile = do
   cts <- either (Left . show) Right <$> readJSON infile
   pure $ case cts of
-           Right (Object o) -> Right (Spec o infile)
+           Right (Object o) ->
+             let (path, filename) = splitFileName infile
+             in Right (Spec o path filename)
            Right _ -> Left "JSON was not an object"
            Left e -> Left e
 
@@ -186,12 +191,10 @@ addTextJS = [ "function addText(parent, text) { "
             , "} "
             ]
 
--- TODO: should parent node be emoved from DOM on close? depends on
---       what page it is being used in
+
 addTitleJS = [ "function addTitle(div, contents, infile) { "
              , "const el = document.createElement('p'); "
              , "el.setAttribute('class', 'location'); "
-             , "addText(el, 'File: ' + infile); "
              , "div.appendChild(el); "
              , "const close = document.createElement('span'); "
              , "close.setAttribute('class', 'close'); "
@@ -202,7 +205,7 @@ addTitleJS = [ "function addTitle(div, contents, infile) { "
              , "div.removeChild(div.firstChild); "
              , "} "
              , "}); "
-             , "const hide = document.createElement('hide'); "
+             , "const hide = document.createElement('span'); "
              , "hide.setAttribute('class', 'hide'); "
              , "el.appendChild(hide); "
              , "hide.addEventListener('click', (ev) => { "
@@ -212,6 +215,7 @@ addTitleJS = [ "function addTitle(div, contents, infile) { "
              , "contents.style.display = 'block'; "
              , "hide.setAttribute('class', 'hide'); } "
              , "}); "
+             , "addText(el, 'File: ' + infile); "
              , "} "
              ]
 
@@ -315,7 +319,8 @@ closeCSS = [ ".close { "
            , "background: rgba(230, 20, 20, 0.6); "
            , "border-radius: 50%; "
            , "cursor: pointer; "
-           , "float: left; "
+           , "display: inline-block; "
+           -- , "float: left; "
            , "height: 1em; "
            , "margin-right: 0.5em; "
            , "width: 1em; "
@@ -330,7 +335,8 @@ hideCSS = [ ".hide { "
           , "border-right: 0.5em solid transparent; "
           , "border-top: 1em solid rgba(255, 165, 0, 0.6); "
           , "cursor: pointer; "
-          , "float: left; "
+          , "display: inline-block; "
+          -- , "float: left; "
           , "height: 0; "
           , "margin-right: 0.5em; "
           , "width: 0; "
@@ -340,7 +346,8 @@ hideCSS = [ ".hide { "
           , "border-right: 0.5em solid transparent; "
           , "border-bottom: 1em solid rgba(255, 165, 0, 0.6); "
           , "cursor: pointer; "
-          , "float: left; "
+          , "display: inline-block; "
+          -- , "float: left; "
           , "height: 0; "
           , "margin-right: 0.5em; "
           , "width: 0; "
@@ -366,6 +373,9 @@ locationCSS = [ "p.location { "
               , "margin: -1em; "
               , "margin-bottom: 0; "
               , "padding: 0.5em; "
+                -- add a little horizontal space before the end of the "window"
+                -- for when the visualization is minimised
+              , "padding-right: 1.5em; "
               , "} "
               , "div.contents { "
               , "margin: 0; "
@@ -551,11 +561,6 @@ pageLink infile =
 makeLi :: FilePath -> H.Html
 makeLi infile = H.li (pageLink infile)
 
-makeParentLink :: FilePath -> H.Html
-makeParentLink indir =
-  let toHref = H.toValue ("/display" </> indir </> "..")
-  in (H.a ! A.href toHref) "parent directory"
-
 
 embedLink :: FilePath -> H.Html
 embedLink infile =
@@ -583,8 +588,7 @@ emptyDir indir =
             if indir == "."
               then H.p "There is nothing to see in the base directory!"
               else do
-                H.p (H.toHtml ("Directory: " ++ indir))
-                H.p (makeParentLink indir)
+                labelDirectory True indir
                 H.p "There is nothing to see here!"
 
   in html (renderHtml page)
@@ -624,7 +628,9 @@ embedJS =
             , "addDescription(contents, tgt.response.spec); "
             , "const vdiv = document.createElement('div'); "
             , "contents.appendChild(vdiv); "
-            , "vegaEmbed(vdiv, tgt.response.spec, vopts).catch((err) => { "
+            , "vegaEmbed(vdiv, tgt.response.spec, vopts).then((result) => { "
+            , "resetLocationWidth(div); "
+            , "}).catch((err) => { "
             , "vdiv.appendChild(document.createTextNode(err)); "
             , "vdiv.setAttribute('class', 'vega-error'); "
             , "}); "
@@ -633,7 +639,8 @@ embedJS =
             , "} "
             , "div.style.display = 'block';"
             , "} "
-            ] ++ addTextJS ++ addTitleJS ++ addDescriptionJS
+            ] ++ addTextJS ++ addTitleJS ++ addDescriptionJS ++
+            resetLocationJS
 
   in (H.script ! A.type_ "text/javascript") (mconcat cts)
 
@@ -642,15 +649,39 @@ embedCSS :: H.Html
 embedCSS =
   let cts = [ ".vizview { "
             , "display: none; "
-            , "left: 2em; "
-            -- , "overflow: hidden; "   why did I add this?
-            , "position: fixed; "
-            , "top: 2em; "
+            -- , "float: left; "
+            , "overflow: auto; "  -- is this worth it?
+            , "} "
+            , ".vizlist { "
+            , "display: flex; "
+            , "justify-content: space-around; "
+            , "}"
+            , "#visualizations { "
+            -- , "clear: both; "  -- only needed if vizview is float
             , "} "
             ] ++ closeCSS ++ hideCSS ++ descriptionCSS ++
             locationCSS ++ pageSetupCSS ++ vegaErrorCSS ++ vizCSS
 
   in toCSS cts
+
+
+labelDirectory ::
+  Bool
+  -- ^ If True then the parent directory is ../ above the input directory
+  --   and the link label includes the term "parent".
+  -> FilePath
+  -- ^ The directory name for display to the user
+  -> H.Html
+labelDirectory goUp dirName = do
+  H.p (H.toHtml ("Directory: " ++ dirName))
+  let baseURL = "/display" </> dirName
+      url = if goUp then baseURL </> ".." else baseURL
+      label = mconcat [ if goUp then "parent " else "", "directory" ]
+
+  H.p (mconcat [ "Go to "
+               , (H.a ! A.href (H.toValue url)) label
+               , "."
+               ])
 
 
 showDir ::
@@ -675,8 +706,7 @@ showDir indir (subdirs, files) =
 
           (H.div ! A.id "mainbar") $ do
             unless atTop $ do
-              H.p (H.toHtml ("Directory: " ++ indir))
-              H.p (makeParentLink indir)
+              labelDirectory True indir
 
             unless (null subdirs) $ do
               H.h2 "Sub-directories"
@@ -688,8 +718,10 @@ showDir indir (subdirs, files) =
             --       previous visualization when viewing one.
             --
             unless (null files) $ do
-              (H.div ! A.class_ "vizview" ! A.id "vizview") ""
-              (H.div ! A.id "vizlist") $ do
+              (H.div ! A.class_ "vizlist") $
+                (H.div ! A.class_ "vizview" ! A.id "vizview") ""
+
+              (H.div ! A.id "visualizations") $ do
                 H.h2 "Visualizations"
                 H.table $ do
                   H.thead $
@@ -753,16 +785,18 @@ pageCSS =
 --  visualization.
 --
 pageJS :: H.Html
-pageJS =
-  let cts = [ "function resetLocationWidth(div) { "
-            , "const locs = div.getElementsByClassName('location'); "
-            , "if (locs.length === 0) { console.log('DBG: no location'); console.log({div}); return; } "
-            , "const loc = locs[0]; "
-            , "loc.style.width = div.scrollWidth + 'px'; "
-            , "} "
-            ]
+pageJS = toJS resetLocationJS
 
-  in toJS cts
+
+resetLocationJS :: [H.Html]
+resetLocationJS =
+  [ "function resetLocationWidth(div) { "
+  , "const locs = div.getElementsByClassName('location'); "
+  , "if (locs.length === 0) { console.log('DBG: no location'); console.log({div}); return; } "
+  , "const loc = locs[0]; "
+  , "loc.style.width = div.scrollWidth + 'px'; "
+  , "} "
+  ]
 
 
 showPage :: FilePath -> ActionM ()
@@ -793,12 +827,9 @@ showPage infile = do
                 homeLink
 
               (H.div ! A.id "mainbar") $ do
-                H.p $ H.toHtml (mconcat ["Go to ", parentLink])
+                labelDirectory False (specPath spec)
                 (H.div ! A.class_ "vizlist") contents
 
-          dirName = H.toValue ("/display" </> takeDirectory infile)
-          parentLink = (H.a ! A.href dirName) "parent directory"
-          
       in html (renderHtml page)
     
 
@@ -816,9 +847,10 @@ embedPage :: FilePath -> ActionM ()
 embedPage infile = do
   espec <- liftIO (readSpec infile)
   case espec of
-    Right (Spec o _) -> json (object [ "spec" .= Object o
-                                     , "infile" .= infile
-                                     ])
+    Right (Spec o path filename) -> json (object [ "spec" .= Object o
+                                                 , "path" .= path
+                                                 , "infile" .= filename
+                                                 ])
     _ -> errorStatus
 
 

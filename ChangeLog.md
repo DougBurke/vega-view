@@ -1,5 +1,15 @@
 # Changelog for vega-view
 
+## 0.3.1.3
+
+Change the appearance and linking of directory names, in the "label"
+of a plot (drop the path and show just the file name), and on the web
+pages. A common stanza is used to indicate the current directory or file
+and the path to the "parent".
+
+There have been style changes to how the inline plots are displayed,
+to allow them to be horizontally scrolled.
+
 ## 0.3.1.2
 
 The "view a visualization" page - i.e. /display/..path-to-spec - now
