@@ -1,5 +1,15 @@
 # Changelog for vega-view
 
+## 0.3.1.4
+
+Change the layout of the "directory with visualizations" page to move
+the inline view to the right of the list of files. The way the files
+are listed has also been changed to reduce horizontal space and remove
+some repetition.
+
+The SVG used for the "right-arrow" comes from the free version of
+fontawesome, version 5.10.2 (arrow-alt-circle-right).
+
 ## 0.3.1.3
 
 Change the appearance and linking of directory names, in the "label"

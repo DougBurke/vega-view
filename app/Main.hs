@@ -556,7 +556,7 @@ pageLink :: FilePath -> H.Html
 pageLink infile =
   let toHref = H.toValue ("/display" </> infile)
       toText = H.toHtml (takeFileName infile)
-  in (H.a ! A.href toHref) toText
+  in (H.a ! A.href toHref ! A.class_ "pagelink") toText
 
 makeLi :: FilePath -> H.Html
 makeLi infile = H.li (pageLink infile)
@@ -565,10 +565,12 @@ makeLi infile = H.li (pageLink infile)
 embedLink :: FilePath -> H.Html
 embedLink infile =
   let toHref = H.toValue ("/embed" </> infile)
-      toText = H.toHtml (takeFileName infile)
       hdlr = mconcat [ "embed('", toHref, "');" ]
 
-  in (H.a ! A.href "#" ! A.onclick hdlr) toText
+      -- label = ">>"  -- H.toHtml (takeFileName infile)
+      label = B.preEscapedText arrowSVG
+
+  in (H.a ! A.href "#" ! A.onclick hdlr ! A.class_ "embedlink") label
 
 
 -- Nothing to see here; slightly different if base directory or not
@@ -649,15 +651,46 @@ embedCSS :: H.Html
 embedCSS =
   let cts = [ ".vizview { "
             , "display: none; "
-            -- , "float: left; "
-            , "overflow: auto; "  -- is this worth it?
+            , "overflow: auto; "
             , "} "
             , ".vizlist { "
             , "display: flex; "
             , "justify-content: space-around; "
             , "}"
             , "#visualizations { "
-            -- , "clear: both; "  -- only needed if vizview is float
+            , "float: left; "
+            , "margin-right: 1em; "
+            , "} "
+            , "#visualizations h2 { "
+            , "margin-bottom: 0; "
+            , "margin-top: 0; "
+            , "} "
+            , "#visualizations .pagelist { "
+            , "display: grid; "
+            , "grid-column-gap: 0.4em; "
+            , "grid-row-gap: 0.4em; "
+            , "grid-template-columns: 1fr 2.5em; "
+            , "margin-top: 1em; "
+            , "} "
+            , "#visualizations .pagelist a { "
+            , "background: rgba(120, 120, 200, 0.8); "
+            , "color: white; "
+            , "font-family: sans-serif; "
+            , "padding: 0.5em; "
+            , "text-decoration: none; "
+            , "} "
+            , "#visualizations .pagelist a:hover { "
+            , "background: rgba(120, 120, 200, 1); "
+            , "box-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.4); "
+            , "} "
+            , ".pagelink { "
+            , "} "
+            , ".embedlink { "
+            , "} "
+            , ".embedlink svg { "
+            , "fill: white; "
+            , "height: 1.2em; "
+            , "width: 1.2em; "
             , "} "
             ] ++ closeCSS ++ hideCSS ++ descriptionCSS ++
             locationCSS ++ pageSetupCSS ++ vegaErrorCSS ++ vizCSS
@@ -705,8 +738,7 @@ showDir indir (subdirs, files) =
             homeLink
 
           (H.div ! A.id "mainbar") $ do
-            unless atTop $ do
-              labelDirectory True indir
+            unless atTop (labelDirectory True indir)
 
             unless (null subdirs) $ do
               H.h2 "Sub-directories"
@@ -718,21 +750,15 @@ showDir indir (subdirs, files) =
             --       previous visualization when viewing one.
             --
             unless (null files) $ do
-              (H.div ! A.class_ "vizlist") $
-                (H.div ! A.class_ "vizview" ! A.id "vizview") ""
-
               (H.div ! A.id "visualizations") $ do
                 H.h2 "Visualizations"
-                H.table $ do
-                  H.thead $
-                    H.tr $ do
-                      H.th "View page"
-                      H.th "View inline"
-                  H.tbody $
-                    forM_ files $ \(f, _) ->
-                      H.tr $ do
-                        H.td (pageLink f)
-                        H.td (embedLink f)
+                (H.div ! A.class_ "pagelist") $
+                  forM_ files $ \(f, _) -> do
+                    pageLink f
+                    embedLink f
+
+              (H.div ! A.class_ "vizlist") $
+                (H.div ! A.class_ "vizview" ! A.id "vizview") ""
 
   in html (renderHtml page)
 
@@ -886,6 +912,14 @@ swooshSVG =
         , "       id=\"path5\""
         , "       d=\"m 130.838,381.118 c 1.125,28.749 5.277,54.82 12.695,78.018 7.205,22.53 18.847,40.222 36.812,53.747 52.018,39.16 153.369,16.572 153.369,16.572 l -4.632,-32.843 72.918,42.778 -58.597,58.775 -3.85,-27.303 c 0,0 -100.347,18.529 -163.905,-34.881 -37.659,-31.646 -53.293,-84.021 -51.593,-153.962 0.266,-0.247 4.728,-0.908 6.783,-0.901 z\" /></g></svg>"
         ]
+
+
+-- This is from
+-- https://fontawesome.com/icons/arrow-alt-circle-right?style=solid
+-- version 5.10.2, free version
+--
+arrowSVG :: T.Text
+arrowSVG = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><path d=\"M256 8c137 0 248 111 248 248S393 504 256 504 8 393 8 256 119 8 256 8zM140 300h116v70.9c0 10.7 13 16.1 20.5 8.5l114.3-114.9c4.7-4.7 4.7-12.2 0-16.9l-114.3-115c-7.6-7.6-20.5-2.2-20.5 8.5V212H140c-6.6 0-12 5.4-12 12v64c0 6.6 5.4 12 12 12z\"/></svg>"
 
 
 errorStatus :: ActionM ()
