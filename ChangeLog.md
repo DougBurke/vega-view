@@ -1,5 +1,11 @@
 # Changelog for vega-view
 
+## 0.3.1.5
+
+Report that an error occurred when the embed option failed, which is
+better than the previous behavior (no plot would appear but no
+indication that something happened), but the message is pretty anodyne.
+
 ## 0.3.1.4
 
 Change the layout of the "directory with visualizations" page to move
