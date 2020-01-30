@@ -1,5 +1,14 @@
 # Changelog for vega-view
 
+## 0.3.1.6
+
+Update to Vega Lite version 4 and drop the version requirement on
+Vega Embed (Javascript libraries).
+
+Directory listing now has a scroll bar so that it doesn't extend beyond
+the bottom of the page (ish), which makes it much easier when flipping
+between in-line visualizations.
+
 ## 0.3.1.5
 
 Report that an error occurred when the embed option failed, which is
