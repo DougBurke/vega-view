@@ -662,6 +662,9 @@ embedCSS =
             , "#visualizations { "
             , "float: left; "
             , "margin-right: 1em; "
+            , "width: 20em; "  -- seem to need this
+            , "height: 80vh; " -- guess that 80% is sensible
+            , "overflow-y: auto; "
             , "} "
             , "#visualizations h2 { "
             , "margin-bottom: 0; "
