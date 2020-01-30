@@ -74,7 +74,7 @@ toCSS = (H.style ! A.type_ "text/css") . mconcat
 toJS = (H.script ! A.type_ "text/javascript") . mconcat
 
 
--- Represent a Vega or Vega-Lite sepcification, which has
+-- Represent a Vega or Vega-Lite specification, which has
 -- to be a Javascript object. Other than checking that we
 -- have an object, there is no other validation of the
 -- JSON.
@@ -662,6 +662,9 @@ embedCSS =
             , "#visualizations { "
             , "float: left; "
             , "margin-right: 1em; "
+            , "width: 20em; "  -- seem to need this
+            , "height: 80vh; " -- guess that 80% is sensible
+            , "overflow-y: auto; "
             , "} "
             , "#visualizations h2 { "
             , "margin-bottom: 0; "
@@ -778,12 +781,12 @@ dirPage indir = do
 vegaEmbed :: H.Html
 vegaEmbed =
   let load n = H.script ! A.src (mconcat [ "https://cdn.jsdelivr.net/npm/"
-                                         , n])
+                                         , n ])
 
   in do
     load "vega@5" ""
-    load "vega-lite@3" ""
-    load "vega-embed@4" ""
+    load "vega-lite@4" ""
+    load "vega-embed" ""
 
 
 pageCSS :: H.Html
