@@ -34,6 +34,7 @@ import qualified Data.ByteString.Lazy.Char8 as LB8
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
+import qualified Data.Text.Lazy.IO as LT
 import qualified Text.Blaze as B
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
@@ -44,7 +45,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (Value(String, Object), Object
                   , (.=)
                   , eitherDecode', encode, object)
-import Data.List (sort)
+import Data.List (isSuffixOf, sort)
 import Data.Maybe (catMaybes)
 import Data.Version (showVersion)
 import Network.HTTP.Types (status404)
@@ -830,8 +831,8 @@ resetLocationJS =
   ]
 
 
-showPage :: FilePath -> ActionM ()
-showPage infile = do
+showSpec :: FilePath -> ActionM ()
+showSpec infile = do
   espec <- liftIO (readSpec infile)
   case espec of
     Left emsg -> do
@@ -864,12 +865,20 @@ showPage infile = do
       in html (renderHtml page)
     
 
+-- This was originally only going to serve Vega-Lite specifications,
+-- but we need it to also support data files (for testing purposes,
+-- when we haven't made the data file available on GitHub). This
+-- is done in a rather hacky way: assuming the specifications
+-- always end in .vg.json.
+--
 displayPage :: FilePath -> ActionM ()
 displayPage infile = do
   isDir <- liftIO (doesDirectoryExist infile)
   if isDir
     then dirPage infile
-    else showPage infile
+    else if ".vg.json" `isSuffixOf` infile
+         then showSpec infile
+         else copyContents infile
     
 
 -- Return data needed to display this file.
@@ -883,6 +892,15 @@ embedPage infile = do
                                                  , "infile" .= filename
                                                  ])
     _ -> errorStatus
+
+
+-- Not streaming, and no error handling ...
+--
+copyContents :: FilePath -> ActionM ()
+copyContents infile = do
+  cts <- liftIO $ LT.readFile infile
+  text cts
+    
 
 
 -- embed https://commons.wikimedia.org/wiki/File:Curved_Arrow.svg
