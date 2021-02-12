@@ -1,5 +1,9 @@
 # Changelog for vega-view
 
+## 0.3.1.7
+
+Bump aeson and scotty dependencies and try Yet-Another-Nix setup.
+
 ## 0.3.1.6
 
 Update to Vega Lite version 4 and drop the version requirement on

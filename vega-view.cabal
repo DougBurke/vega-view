@@ -1,5 +1,5 @@
 name:           vega-view
-version:        0.3.1.6
+version:        0.3.1.7
 synopsis:       Easily view Vega or Vega-Lite visualizations.
 description:    A web server that is used to view all the Vega and Vega-Lite
                 specifications in a directory, or sub-directory. It is similar
@@ -12,7 +12,7 @@ homepage:       https://github.com/DougBurke/vega-view#vega-view
 bug-reports:    https://github.com/DougBurke/vega-view/issues
 author:         Douglas Burke
 maintainer:     dburke.gw@gmail.com
-copyright:      2019, 2020 Douglas Burke
+copyright:      2019, 2020, 2021 Douglas Burke
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -35,7 +35,7 @@ executable vegaview
       app
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-                aeson >= 1.1 && < 1.5
+                aeson >= 1.1 && < 1.6
               , base >= 4.9 && <5
               , blaze-html >= 0.7 && < 0.10
               , blaze-markup >= 0.6 && < 0.9
@@ -43,7 +43,7 @@ executable vegaview
               , directory >= 1.2.5.0 && < 1.4
               , filepath >= 1.4 && < 1.5
               , http-types >= 0.9 && < 0.13
-              , scotty >= 0.11 && < 0.12
+              , scotty >= 0.11 && < 0.13
               , text >= 1.2 && < 1.3
               , unordered-containers >= 0.2 && < 0.3
               
