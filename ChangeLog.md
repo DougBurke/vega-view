@@ -4,6 +4,10 @@
 
 Bump aeson and scotty dependencies and try Yet-Another-Nix setup.
 
+This release adds support for using local data files. To distinguish
+Vega specification files from data, the Vega files are now expected to
+end in `.vg.json`.
+
 ## 0.3.1.6
 
 Update to Vega Lite version 4 and drop the version requirement on
