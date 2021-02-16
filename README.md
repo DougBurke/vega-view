@@ -51,6 +51,9 @@ the web server tries to parse each file as JSON, which could cause
 memory- or time- issues if there are large non-JSON files in the
 directory tree.
 
+Specifications should have filenames ending in `.vg.json`, to
+distinguish them from local data files.
+
 ## GHC support
 
 This is currently a **very basic** application, so will hopefully build
