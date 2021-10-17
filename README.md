@@ -57,8 +57,8 @@ distinguish them from local data files.
 ## GHC support
 
 This is currently a **very basic** application, so will hopefully build
-against a wide variety of GHC installations. There has been /no/ testing
-on Windows.
+against a wide variety of GHC installations. There has been /limited/ testing
+on Windows (it builds is as far as I've got).
 
 ## Bugs and Issues
 
