@@ -1,5 +1,10 @@
 # Changelog for vega-view
 
+## 0.4.0.0
+
+Support aeson 2.0. There is no functional change worthy of a major
+version but let's do it anysay!
+
 ## 0.3.1.7
 
 Bump aeson and scotty dependencies and try Yet-Another-Nix setup.

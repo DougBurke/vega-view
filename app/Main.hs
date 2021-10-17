@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 {-
@@ -31,7 +32,13 @@ The code could be refactored to be a SPA, but does it need to be?
 module Main where
 
 import qualified Data.ByteString.Lazy.Char8 as LB8
+
+#if MIN_VERSION_aeson(2, 0, 0)
+import qualified Data.Aeson.KeyMap as KeyMap
+#else
 import qualified Data.HashMap.Strict as HM
+#endif
+
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.IO as LT
@@ -42,6 +49,7 @@ import qualified Text.Blaze.Html5.Attributes as A
 import Control.Exception (IOException, try)
 import Control.Monad (forM_, unless)
 import Control.Monad.IO.Class (liftIO)
+
 import Data.Aeson (Value(String, Object), Object
                   , (.=)
                   , eitherDecode', encode, object)
@@ -106,7 +114,13 @@ createView ::
 createView spec specId =
   let vis = specVis spec
 
-      mDesc = case HM.lookup "description" vis of
+      -- Must be a better way to deal with this change in aeson-2.0
+#if MIN_VERSION_aeson(2, 0, 0)
+      getDesc = KeyMap.lookup "description" vis
+#else
+      getDesc = HM.lookup "description" vis
+#endif
+      mDesc = case getDesc of
                 Just (String d) -> Just d
                 _ -> Nothing
 
