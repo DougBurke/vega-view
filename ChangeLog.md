@@ -1,5 +1,10 @@
 # Changelog for vega-view
 
+## 0.4.0.1
+
+Bump dependencies for aeson, bytestring, filepath, scotty, and
+text.
+
 ## 0.4.0.0
 
 Support aeson 2.0. There is no functional change worthy of a major

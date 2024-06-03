@@ -64,7 +64,8 @@ import Text.Blaze.Html5 ((!))
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Scotty (ScottyM, ActionM
                   , get, html, json
-                  , notFound, param
+                  , notFound
+                  , param  -- deprecated in Scotty 0.20
                   , redirect, regex
                   , status, scotty
                   , text)
