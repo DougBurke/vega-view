@@ -1,5 +1,10 @@
 # Changelog for vega-view
 
+## 0.4.0.2
+
+Bump dependency for scotty to support version 0.30 and drop anything
+below 0.21.
+
 ## 0.4.0.1
 
 Bump dependencies for aeson, bytestring, filepath, scotty, and
