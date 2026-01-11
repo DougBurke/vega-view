@@ -65,7 +65,7 @@ import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Web.Scotty (ScottyM, ActionM
                   , get, html, json
                   , notFound
-                  , param  -- deprecated in Scotty 0.20
+                  , pathParam
                   , redirect, regex
                   , status, scotty
                   , text)
@@ -974,11 +974,11 @@ webapp = do
   get "/display/" (dirPage ".")
 
   get (regex "^/display/(.+)$") $ do
-    infile <- param "1"
+    infile <- pathParam "1"
     displayPage infile
 
   get (regex "^/embed/(.+)$") $ do
-    infile <- param "1"
+    infile <- pathParam "1"
     embedPage infile
 
   notFound errorStatus
